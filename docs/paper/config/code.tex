@@ -1,0 +1,59 @@
+\tcbuselibrary{breakable,skins,listings}
+
+\definecolor{codebg}{HTML}{F5F5F5}
+\definecolor{codeframe}{HTML}{D0D7DE}
+\definecolor{codecomment}{HTML}{57606A}
+\definecolor{codekeyword}{HTML}{953800}
+\definecolor{codestring}{HTML}{0A3069}
+
+\lstdefinestyle{papercode}{
+  inputencoding=utf8,
+  extendedchars=true,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{codekeyword}\bfseries,
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codestring},
+  numbers=left,
+  numberstyle=\scriptsize\color{codecomment},
+  stepnumber=1,
+  numbersep=10pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  tabsize=2,
+  keepspaces=true,
+  frame=none,
+  columns=fullflexible,
+  upquote=true
+}
+
+\NewTCBListing{codeblock}{ O{} m }{
+  listing engine=listings,
+  breakable,
+  enhanced,
+  colback=codebg,
+  colframe=codeframe,
+  boxrule=0.5pt,
+  arc=2pt,
+  outer arc=2pt,
+  left=6pt,
+  right=6pt,
+  top=6pt,
+  bottom=6pt,
+  listing only,
+  title={#2},
+  fonttitle=\bfseries\small,
+  coltitle=black,
+  attach boxed title to top left={xshift=0.5em,yshift*=-\tcboxedtitleheight/2},
+  boxed title style={
+    colback=white,
+    colframe=codeframe,
+    boxrule=0.5pt,
+    arc=2pt,
+    left=4pt,
+    right=4pt,
+    top=2pt,
+    bottom=2pt
+  },
+  listing options={style=papercode,#1}
+}

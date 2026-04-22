@@ -1,0 +1,69 @@
+\pagestyle{coverstyle}
+\thispagestyle{coverstyle}
+
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east,inner sep=0pt] (coverimage) at ([xshift=-2.1cm,yshift=-1.8cm]current page.north east) {%
+    \includegraphics[width=2.1cm]{assets/cover/gob.png}%
+  };
+  \node[anchor=north east,inner sep=0pt] at ([yshift=-0.15cm]coverimage.south east) {%
+    {\scriptsize
+      \begin{tabular}{@{}r@{}}
+        \textbf{Instituto Tecnológico de Morelia} \\
+        Subdirección Académica                    \\
+        Departamento de Sistemas y Computación    \\
+        Jornadas de Investigación de Pregrado, 2025.3
+      \end{tabular}}%
+  };
+\end{tikzpicture}
+
+\noindent
+\begin{minipage}[t]{0.54\textwidth}
+  \includegraphics[width=0.88\linewidth]{assets/cover/tecnm-educacion.pdf}
+\end{minipage}
+
+\vspace{2.2cm}
+
+\begin{center}
+  {\headingfont\bfseries\Large \reporttitle\par}
+\end{center}
+
+\vspace{0.9cm}
+
+\begin{center}
+  Autores:\\[0.35\baselineskip]
+  \studentone\\
+  \studenttwo
+\end{center}
+
+\vspace{0.45cm}
+
+\begin{center}
+  \studentemails
+\end{center}
+
+\vspace{0.55cm}
+
+\begin{center}
+  Asesor:\\[0.35\baselineskip]
+  \advisor
+\end{center}
+
+\vspace{0.3cm}
+
+\begin{center}
+  Abstract: \\
+  {\small \paperabstract\par}
+\end{center}
+
+
+\vspace{0.35cm}
+
+{\small \textbf{Keywords}\\
+  \paperkeywordsen\par}
+
+\vspace{0.25cm}
+
+{\small \textbf{Palabras clave}\\
+  \paperkeywordses\par}
+
+\clearpage

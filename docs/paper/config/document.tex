@@ -1,0 +1,37 @@
+\geometry{
+  letterpaper,
+  left=2.5cm,
+  right=2.5cm,
+  top=2.2cm,
+  bottom=2.4cm,
+  headheight=14.5pt,
+  headsep=0.5cm,
+  footskip=0.8cm
+}
+
+\setstretch{1}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45\baselineskip}
+\setlength{\emergencystretch}{2em}
+\setlist[itemize]{topsep=0.25\baselineskip,itemsep=0pt}
+\setlist[enumerate]{topsep=0.25\baselineskip,itemsep=0pt}
+
+\titleformat{\section}{\headingfont\bfseries\normalsize}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\headingfont\bfseries\normalsize}{\thesubsection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.1\baselineskip}{0.4\baselineskip}
+\titlespacing*{\subsection}{0pt}{0.9\baselineskip}{0.3\baselineskip}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\thepage}
+\fancyfoot[L]{\footnotesize \footerdocumentname}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\fancypagestyle{coverstyle}{%
+  \fancyhf{}
+  \fancyhead[R]{\thepage}
+  \fancyfoot[L]{\footnotesize \footerdocumentname}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0.4pt}
+}
