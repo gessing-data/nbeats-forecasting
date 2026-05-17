@@ -24,15 +24,61 @@ Desde esta perspectiva, N-BEATS puede entenderse como una red neuronal profunda 
 
 \subsection{Arquitectura N-BEATS}
 
-N-BEATS, acrónimo de \emph{Neural Basis Expansion Analysis of Time Series}, fue presentado por \textcite{oreshkin2020} como una arquitectura de aprendizaje profundo para pronóstico puntual univariado de series temporales. La propuesta parte de una formulación común de series temporales dada una ventana de observaciones pasadas, el modelo estima un vector de valores futuros para un horizonte determinado.
+N-BEATS, acrónimo de \emph{Neural Basis Expansion Analysis of Time Series}, fue presentado por \textcite{oreshkin2020} como una arquitectura de aprendizaje profundo para pronóstico puntual de series temporales. Su formulación parte de una idea directa: a partir de una ventana fija de observaciones pasadas, el modelo estima un conjunto de valores futuros para un horizonte determinado. En su versión original, esta relación puede plantearse de forma univariada, de modo que la información de entrada corresponde a valores históricos de la misma variable que se desea pronosticar.
 
-Su principio central consiste en procesar una ventana histórica mediante una sucesión profunda de bloques totalmente conectados que producen dos salidas complementarias: un \emph{backcast}, orientado a reconstruir la parte de la historia que el bloque logra representar, y un \emph{forecast}, que aporta una contribución al horizonte futuro.
+A diferencia de arquitecturas que procesan la secuencia paso a paso, como las redes recurrentes, N-BEATS organiza el aprendizaje mediante una sucesión de bloques totalmente conectados. En una red totalmente conectada, las neuronas de una capa se enlazan con las de la capa siguiente, lo que permite transformar la ventana histórica mediante combinaciones no lineales flexibles. La predicción final no depende de un único bloque: se construye acumulando contribuciones sucesivas producidas a lo largo de una arquitectura profunda \parencite{oreshkin2020}.
 
-Los bloques de la arquitectura se organizan en \emph{stacks}, que se pueden entender como aproximación de funciones, y se enlazan mediante conexiones residuales hacia atrás y adelante. Cada bloque transforma la ventana de entrada mediante varias capas densas y produce coeficientes internos que se proyectan en las dos salidas previamente mencionadas. Después de cada bloque, el modelo calcula el residuo restando el \emph{backcast} a la entrada recibida; ese residuo se entrega al bloque siguiente. En paralelo, las contribuciones de \emph{forecast} se agregan para construir el pronóstico final. Esta dinámica se conoce como \strong{apliamiento doblemente residual} porque opera tanto sobre la reconstrucción de la historia como sobre la acoumulación de la predicción futura.
+Cada bloque genera dos salidas complementarias. La primera es el \emph{backcast}, que intenta reconstruir la parte de la historia que el bloque logra representar. La segunda es el \emph{forecast}, que constituye una contribución parcial al horizonte futuro. El \emph{backcast} no es el resultado buscado por el usuario, sino un mecanismo interno para organizar el aprendizaje: al identificar qué parte de la entrada ya fue explicada, el modelo puede entregar al siguiente bloque una señal residual con la información que aún falta representar.
 
-La arquitectura N-BEATS puede configurarse de forma genérica o interpretable. En la configuración genérica, los bloques aprenden representaciones flexibles sin imponer una forma temporal predeterminada; en la interpretable, los bloques pueden organizarse alrededor de componentes como tendencia y estacionalidad mediante bases estructuradas \parencite{oreshkin2020}.
+Esta dinámica define el carácter residual de N-BEATS. Después de cada bloque, el modelo resta el \emph{backcast} de la entrada recibida y pasa el residuo al bloque siguiente. En paralelo, los aportes de \emph{forecast} se suman para formar el pronóstico final. Por ello, la arquitectura se describe como un apilamiento doblemente residual: opera hacia atrás sobre la reconstrucción de la historia y hacia adelante sobre la acumulación de la predicción futura \parencite{oreshkin2020}.
 
-Esta distinción debe tratarse con cuidado. Aunque un modelo como N-BEATS pueda descomponer el pronóstico (ya sea por tendencia, estacionalidad o cualquier otra variable que se guste considerar), eso no significa que esté explicando las causas reales del consumo eléctrico; sólo está organizando la señal, no diciendo el por qué ocurre. Para este trabajo, lo central es que N-BEATS se ajusta a un escenario univariado en el que se busca extraer información predictiva de la trayectoria histórica de la carga, manteniendo abierta la necesidad de comprobar empíricamente si esa capacidad expresiva supera a una referencia estadística.
+Los bloques se agrupan en \emph{stacks}. Un \emph{stack} puede entenderse como un conjunto de bloques orientado a aprender una forma de representar la serie. En la configuración genérica, estos conjuntos no imponen una estructura temporal predeterminada y permiten que el modelo aprenda representaciones flexibles a partir de los datos. En la configuración interpretable, los \emph{stacks} pueden organizarse alrededor de componentes temporales como tendencia y estacionalidad mediante bases estructuradas \parencite{oreshkin2020}.
+
+La distinción entre configuración genérica e interpretable debe tratarse con cuidado. La versión interpretable facilita leer el pronóstico como una combinación de componentes temporales, pero esa descomposición no equivale a una explicación causal del consumo eléctrico. En otras palabras, si el modelo separa una señal en tendencia y estacionalidad, está organizando matemáticamente la serie, no identificando por sí mismo las causas físicas, económicas o sociales de la demanda.
+
+Desde una perspectiva matemática, el problema puede expresarse como la transformación de una ventana histórica en un horizonte de pronóstico. Si $T$ representa el tamaño de la ventana de entrada y $H$ el horizonte futuro, se definen:
+
+\[
+    \mathbf{x} = [y_{t-T+1}, \ldots, y_t] \in R^{T},
+    \qquad
+    \mathbf{y} = [y_{t+1}, \ldots, y_{t+H}] \in R^{H},
+    \qquad
+    \hat{\mathbf{y}} = F(\mathbf{x}).
+\]
+
+En esta notación, $\mathbf{x}$ contiene las observaciones pasadas disponibles en el tiempo $t$, $\mathbf{y}$ representa los valores futuros que se desean estimar y $F$ es la función aprendida por la red. N-BEATS aproxima esa función mediante bloques sucesivos, no mediante una única transformación directa.
+
+Para cada bloque $\ell$, las capas internas producen coeficientes que se proyectan en dos salidas: una reconstrucción de la entrada histórica y una contribución al futuro. De forma simplificada, esto puede representarse como:
+
+\[
+    \hat{\mathbf{x}}_{\ell} = g_{\ell}^{b}(\theta_{\ell}^{b}),
+    \qquad
+    \hat{\mathbf{y}}_{\ell} = g_{\ell}^{f}(\theta_{\ell}^{f}).
+\]
+
+Aquí, $\hat{\mathbf{x}}_{\ell}$ corresponde al \emph{backcast} del bloque, $\hat{\mathbf{y}}_{\ell}$ a su \emph{forecast}, y $\theta_{\ell}^{b}$ y $\theta_{\ell}^{f}$ son coeficientes internos generados por la red. Las funciones $g_{\ell}^{b}$ y $g_{\ell}^{f}$ proyectan esos coeficientes hacia el espacio de la historia y hacia el espacio del horizonte futuro, respectivamente \parencite{oreshkin2020}.
+
+El mecanismo residual se resume en dos operaciones. La primera actualiza la parte de la historia que queda por explicar; la segunda acumula las contribuciones al pronóstico:
+
+\[
+    \mathbf{x}_{\ell+1} = \mathbf{x}_{\ell} - \hat{\mathbf{x}}_{\ell},
+    \qquad
+    \hat{\mathbf{y}} = \sum_{\ell=1}^{L} \hat{\mathbf{y}}_{\ell}.
+\]
+
+Así, $\mathbf{x}_{\ell}$ es la entrada que recibe el bloque $\ell$, $\mathbf{x}_{\ell+1}$ es el residuo entregado al bloque siguiente y $L$ es el número total de bloques considerados. Esta formulación muestra por qué la arquitectura aprende por contribuciones sucesivas: cada bloque reduce una parte de la historia pendiente y añade una parte del pronóstico final.
+
+La noción de \emph{basis expansion} aparece cuando los coeficientes internos se combinan con funciones o matrices base. En una forma simplificada, las salidas de un bloque pueden escribirse como:
+
+\[
+    \hat{\mathbf{x}}_{\ell} = \mathbf{B}_{\ell}^{b}\theta_{\ell}^{b},
+    \qquad
+    \hat{\mathbf{y}}_{\ell} = \mathbf{B}_{\ell}^{f}\theta_{\ell}^{f}.
+\]
+
+Las matrices $\mathbf{B}_{\ell}^{b}$ y $\mathbf{B}_{\ell}^{f}$ representan bases para reconstruir el pasado y proyectar el futuro. En la configuración genérica, estas proyecciones son flexibles; en la configuración interpretable, pueden definirse para representar formas temporales reconocibles, como tendencia o estacionalidad. Esta formulación ayuda a entender por qué N-BEATS combina capacidad expresiva con una posible lectura estructurada del pronóstico \parencite{oreshkin2020}.
+
+En conjunto, N-BEATS resulta adecuado para estudiar el pronóstico univariado de demanda eléctrica porque transforma directamente una trayectoria histórica en un horizonte futuro, distribuye el aprendizaje entre bloques residuales y puede capturar patrones no lineales sin exigir una especificación manual de todos los componentes temporales. Su uso previo en pronóstico de carga eléctrica refuerza esta pertinencia \parencite{oreshkin2021}. No obstante, sigue siendo un modelo profundo: su desempeño depende de la frecuencia de la serie, el horizonte, la cantidad de datos, la configuración de entrenamiento y una evaluación temporal estricta.
 
 \subsection{Métricas de evaluación de modelos de pronóstico}
 
