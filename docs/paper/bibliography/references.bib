@@ -1,5 +1,5 @@
 @article{velasquez2007,
-  author  = {Velásquez Henao, Juan David and Dyner Resonsew, Isaac and Castro Souza, Reinaldo},
+  author  = {Velásquez Henao, Juan David and Dyner Rezonzew, Isaac and Castro Souza, Reinaldo},
   title   = {¿Por qué es tan difícil obtener buenos pronósticos de los precios de la electricidad en mercados competitivos?},
   journal = {Cuadernos de Administración},
   volume  = {20},
@@ -61,13 +61,13 @@
   url     = {https://revistas.uadec.mx/index.php/equilibrioeconomico/article/view/358}
 }
 
-@article{oreshkin2019,
+@inproceedings{oreshkin2020,
   author  = {Oreshkin, B. N. and Carpov, D. and Chapados, N. and Bengio, Y.},
   title   = {N-BEATS: Neural Basis Expansion Analysis for Interpretable Time Series Forecasting},
-  journal = {arXiv},
-  year    = {2019},
+  booktitle = {International Conference on Learning Representations},
+  year    = {2020},
   doi     = {10.48550/arXiv.1905.10437},
-  url     = {https://doi.org/10.48550/arXiv.1905.10437}
+  url     = {https://openreview.net/forum?id=r1ecqn4YwB}
 }
 
 @online{perry2025,
@@ -106,18 +106,23 @@
   author       = {Olivares, Kin G. and Challu, Cristian and Marcjasz, Grzegorz and Weron, Rafa{\l} and Dubrawski, Artur},
   title        = {Neural basis expansion analysis with exogenous variables: Forecasting electricity prices with NBEATSx},
   journal      = {International Journal of Forecasting},
-  year         = {2022},
+  year         = {2023},
+  volume       = {39},
+  number       = {2},
+  pages        = {884--900},
   doi          = {10.1016/j.ijforecast.2022.03.001},
   url          = {https://doi.org/10.1016/j.ijforecast.2022.03.001},
-  note         = {arXiv:2104.05522}
+  note         = {Published online in 2022}
 }
 
-@article{challu2022,
+@misc{challu2022,
   author       = {Challu, Cristian and Olivares, Kin G. and Oreshkin, Boris N. and Garza, Federico and Mergenthaler-Canseco, Max and Dubrawski, Artur},
   title        = {N-HiTS: Neural Hierarchical Interpolation for Time Series Forecasting},
-  journal      = {Proceedings of the AAAI Conference on Artificial Intelligence (accepted)},
   year         = {2022},
-  url          = {https://doi.org/10.48550/arXiv.2201.12886},
+  eprint       = {2201.12886},
+  archiveprefix = {arXiv},
+  primaryclass = {cs.LG},
+  url          = {https://arxiv.org/abs/2201.12886},
   note         = {arXiv:2201.12886}
 }
 
@@ -128,4 +133,237 @@
   doi     = {10.25832/time_series/2020-10-06},
   url     = {https://data.open-power-system-data.org/time_series/2020-10-06/},
   note    = {Version 2020-10-06. Primary data from various sources; package includes electricity load time series}
+}
+
+@article{hochreiter1997,
+  author = {Hochreiter, Sepp and Schmidhuber, Jürgen},
+  title = {Long Short-Term Memory},
+  journal = {Neural Computation},
+  year = {1997},
+  volume = {9},
+  number = {8},
+  pages = {1735--1780},
+  doi = {10.1162/neco.1997.9.8.1735},
+  url = {https://pubmed.ncbi.nlm.nih.gov/9377276/}
+}
+
+@book{goodfellow2016,
+  author = {Goodfellow, Ian and Bengio, Yoshua and Courville, Aaron},
+  title = {Deep Learning},
+  publisher = {MIT Press},
+  year = {2016},
+  url = {https://www.deeplearningbook.org/}
+}
+
+@inproceedings{cho2014,
+  author    = {Cho, Kyunghyun and van Merriënboer, Bart and Gulcehre, Caglar and Bahdanau, Dzmitry and Bougares, Fethi and Schwenk, Holger and Bengio, Yoshua},
+  title     = {Learning Phrase Representations using {RNN} Encoder--Decoder for Statistical Machine Translation},
+  booktitle = {Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {1724--1734},
+  year      = {2014},
+  publisher = {Association for Computational Linguistics},
+  url       = {https://aclanthology.org/D14-1179/}
+}
+
+@misc{bai2018,
+  author        = {Bai, Shaojie and Kolter, J. Zico and Koltun, Vladlen},
+  title         = {An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling},
+  year          = {2018},
+  eprint        = {1803.01271},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.LG},
+  url           = {https://arxiv.org/abs/1803.01271}
+}
+
+@inproceedings{zhou2021,
+  author    = {Zhou, Haoyi and Zhang, Shanghang and Peng, Jieqi and Zhang, Shuai and Li, Jianxin and Xiong, Hui and Zhang, Wancai},
+  title     = {Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume    = {35},
+  number    = {12},
+  pages     = {11106--11115},
+  year      = {2021},
+  doi       = {10.1609/aaai.v35i12.17325},
+  url       = {https://ojs.aaai.org/index.php/AAAI/article/view/17325}
+}
+
+@inproceedings{zeng2023,
+  author    = {Zeng, Ailing and Chen, Muxi and Zhang, Lei and Xu, Qiang},
+  title     = {Are Transformers Effective for Time Series Forecasting?},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume    = {37},
+  number    = {9},
+  pages     = {11121--11128},
+  year      = {2023},
+  doi       = {10.1609/aaai.v37i9.26317},
+  url       = {https://ojs.aaai.org/index.php/AAAI/article/view/26317}
+}
+
+@inproceedings{wen2023,
+  author    = {Wen, Qingsong and Zhou, Tian and Zhang, Chaoli and Chen, Weiqi and Ma, Ziqing and Yan, Junchi and Sun, Liang},
+  title     = {Transformers in Time Series: A Survey},
+  booktitle = {Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence},
+  pages     = {6778--6786},
+  year      = {2023},
+  doi       = {10.24963/ijcai.2023/759},
+  url       = {https://www.ijcai.org/proceedings/2023/759}
+}
+
+@article{petropoulos2022,
+  author  = {Petropoulos, Fotios and Apiletti, Daniele and Assimakopoulos, Vassilios and Babai, Mohamed Zied and Barrow, Devon K. and Ben Taieb, Souhaib and Bergmeir, Christoph and Bessa, Ricardo J. and Bijak, Jakub and Boylan, John E. and others},
+  title   = {Forecasting: Theory and Practice},
+  journal = {International Journal of Forecasting},
+  volume  = {38},
+  number  = {3},
+  pages   = {705--871},
+  year    = {2022},
+  doi     = {10.1016/j.ijforecast.2021.11.001},
+  url     = {https://doi.org/10.1016/j.ijforecast.2021.11.001}
+}
+
+@article{tashman2000,
+  author  = {Tashman, Leonard J.},
+  title   = {Out-of-Sample Tests of Forecasting Accuracy: An Analysis and Review},
+  journal = {International Journal of Forecasting},
+  volume  = {16},
+  number  = {4},
+  pages   = {437--450},
+  year    = {2000},
+  doi     = {10.1016/S0169-2070(00)00065-0}
+}
+
+@article{hyndman2006,
+  author  = {Hyndman, Rob J. and Koehler, Anne B.},
+  title   = {Another Look at Measures of Forecast Accuracy},
+  journal = {International Journal of Forecasting},
+  volume  = {22},
+  number  = {4},
+  pages   = {679--688},
+  year    = {2006},
+  doi     = {10.1016/j.ijforecast.2006.03.001},
+  url     = {https://robjhyndman.com/publications/another-look-at-measures-of-forecast-accuracy/}
+}
+
+@article{willmott2005,
+  author  = {Willmott, Cort J. and Matsuura, Kenji},
+  title   = {Advantages of the Mean Absolute Error ({MAE}) over the Root Mean Square Error ({RMSE}) in Assessing Average Model Performance},
+  journal = {Climate Research},
+  volume  = {30},
+  pages   = {79--82},
+  year    = {2005},
+  doi     = {10.3354/cr030079},
+  url     = {https://www.int-res.com/abstracts/cr/v30/n1/p79-82/}
+}
+
+@article{chai2014,
+  author  = {Chai, Tianfeng and Draxler, Roland R.},
+  title   = {Root Mean Square Error ({RMSE}) or Mean Absolute Error ({MAE})? Arguments Against Avoiding {RMSE} in the Literature},
+  journal = {Geoscientific Model Development},
+  volume  = {7},
+  pages   = {1247--1250},
+  year    = {2014},
+  doi     = {10.5194/gmd-7-1247-2014},
+  url     = {https://gmd.copernicus.org/articles/7/1247/2014/}
+}
+
+@article{demyttenaere2016,
+  author  = {de Myttenaere, Arnaud and Golden, Boris and Le Grand, B{\'e}n{\'e}dicte and Rossi, Fabrice},
+  title   = {Mean Absolute Percentage Error for Regression Models},
+  journal = {Neurocomputing},
+  volume  = {192},
+  pages   = {38--48},
+  year    = {2016},
+  doi     = {10.1016/j.neucom.2015.12.114},
+  url     = {https://doi.org/10.1016/j.neucom.2015.12.114}
+}
+
+@article{kuster2017,
+  author  = {Kuster, Corentin and Rezgui, Yacine and Mourshed, Monjur},
+  title   = {Electrical Load Forecasting Models: A Critical Systematic Review},
+  journal = {Sustainable Cities and Society},
+  volume  = {35},
+  pages   = {257--270},
+  year    = {2017},
+  doi     = {10.1016/j.scs.2017.08.009},
+  url     = {https://doi.org/10.1016/j.scs.2017.08.009}
+}
+
+@article{vivas2020,
+  author  = {Vivas, Eliana and Allende-Cid, Hector and Salas, Rodrigo},
+  title   = {A Systematic Review of Statistical and Machine Learning Methods for Electrical Power Forecasting with Reported {MAPE} Score},
+  journal = {Entropy},
+  volume  = {22},
+  number  = {12},
+  pages   = {1412},
+  year    = {2020},
+  doi     = {10.3390/e22121412},
+  url     = {https://www.mdpi.com/1099-4300/22/12/1412}
+}
+
+@article{raza2015,
+  author  = {Raza, Muhammad Qamar and Khosravi, Abbas},
+  title   = {A Review on Artificial Intelligence Based Load Demand Forecasting Techniques for Smart Grid and Buildings},
+  journal = {Renewable and Sustainable Energy Reviews},
+  volume  = {50},
+  pages   = {1352--1372},
+  year    = {2015},
+  doi     = {10.1016/j.rser.2015.04.065},
+  url     = {https://doi.org/10.1016/j.rser.2015.04.065}
+}
+
+@article{hong2014,
+  author  = {Hong, Tao and Pinson, Pierre and Fan, Shu},
+  title   = {Global Energy Forecasting Competition 2012},
+  journal = {International Journal of Forecasting},
+  volume  = {30},
+  number  = {2},
+  pages   = {357--363},
+  year    = {2014},
+  doi     = {10.1016/j.ijforecast.2013.07.001},
+  url     = {https://doi.org/10.1016/j.ijforecast.2013.07.001}
+}
+
+@article{oreshkin2021,
+  author  = {Oreshkin, Boris N. and Dudek, Grzegorz and Pe{\l}ka, Pawe{\l} and Turkina, Ekaterina},
+  title   = {{N-BEATS} Neural Network for Mid-Term Electricity Load Forecasting},
+  journal = {Applied Energy},
+  volume  = {293},
+  pages   = {116918},
+  year    = {2021},
+  doi     = {10.1016/j.apenergy.2021.116918},
+  url     = {https://doi.org/10.1016/j.apenergy.2021.116918}
+}
+
+@article{abumohsen2023,
+  author  = {Abumohsen, Mobarak and Owda, Amani Yousef and Owda, Majdi},
+  title   = {Electrical Load Forecasting Using {LSTM}, {GRU}, and {RNN} Algorithms},
+  journal = {Energies},
+  volume  = {16},
+  number  = {5},
+  pages   = {2283},
+  year    = {2023},
+  doi     = {10.3390/en16052283},
+  url     = {https://www.mdpi.com/1996-1073/16/5/2283}
+}
+
+@article{gao2023,
+  author  = {Gao, Jian and Chen, Yu and Hu, Wei and Zhang, Dong},
+  title   = {An Adaptive Deep-Learning Load Forecasting Framework by Integrating Transformer and Domain Knowledge},
+  journal = {Advances in Applied Energy},
+  volume  = {10},
+  pages   = {100142},
+  year    = {2023},
+  doi     = {10.1016/j.adapen.2023.100142},
+  url     = {https://doi.org/10.1016/j.adapen.2023.100142}
+}
+
+@article{pinheiro2023,
+  author  = {Pinheiro, Marco G. and Madeira, Sara C. and Francisco, Alexandre P.},
+  title   = {Short-Term Electricity Load Forecasting: A Systematic Approach from System Level to Secondary Substations},
+  journal = {Applied Energy},
+  volume  = {332},
+  pages   = {120493},
+  year    = {2023},
+  doi     = {10.1016/j.apenergy.2022.120493},
+  url     = {https://doi.org/10.1016/j.apenergy.2022.120493}
 }
