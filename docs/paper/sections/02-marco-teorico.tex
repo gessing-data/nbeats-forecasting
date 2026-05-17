@@ -4,11 +4,24 @@ El pronóstico de demanda eléctrica constituye un problema central en la operac
 
 El pronóstico implica un problema de series temporales, donde el conjunto ordenado de observaciones indexadas por el tiempo se utiliza para estimar valores futuros de una variable. En este contexto, la variable de interés es la demanda eléctrica, que se observa secuencialmente a lo largo del tiempo. La naturaleza dependiente de las observaciones previas hace que el orden de los datos sea crucial para el análisis y la modelización.
 
+\subsection{Redes neuronales y \emph{Deep Learning}}
+
 En un comienzo, la inteligencia artificial fue un abordaje de solución de problemas que son difíciles de resolver intelectualmente por un humano, pero relativamente fáciles para una máquina; problemas que podían describirse mediante una lista formal de reglas matemáticas. El verdadero desafío de la inteligencia artificial yace en describir formalmente una solución que para un humano es intuitivo, como el reconocimiento de imágenes o el procesamiento del lenguaje natural. \parencite{goodfellow2016}.
 
-\subsection{\emph{Deep Learning} o aprendizaje profundo}
+Una red neuronal es un modelo de aprendizaje automático inspirado en la estructura del cerebro humano, compuesto por capas de nodos (neuronas) que procesan información a través de conexiones ponderadas. El aprendizaje profundo, o \emph{deep learning}, se refiere a la utilización de redes neuronales con múltiples capas ocultas, lo que permite aprender representaciones jerárquicas y complejas de los datos. \parencite{goodfellow2016,eren2024}.
 
-El aprendizaje profundo consiste en soluciones que permitan a una máquina el obtener conocimiento a partir de la experiencia para que pueda comprender el mundo en términos de jerarquías de conceptos, donde cada concepto es definido por su relación con otros conceptos más simples \parencite{goodfellow2016}. En este sentido, el aprendizaje profundo se basa en la idea de que las representaciones de alto nivel pueden aprenderse a partir de datos. Esto es especialmente relevante en el pronóstico de series temporales, donde los patrones pueden ser complejos y no lineales, y donde la capacidad de aprender representaciones jerárquicas puede mejorar la precisión del pronóstico.
+El aprendizaje profundo consiste en soluciones que permitan a una máquina el obtener conocimiento a partir de la experiencia para que pueda comprender el mundo en términos de jerarquías de conceptos, donde cada concepto es definido por su relación con otros conceptos más simples \parencite{goodfellow2016}. En este sentido, el aprendizaje profundo se basa en la idea de que las representaciones de alto nivel pueden aprenderse a partir de datos.
+
+El crecimiento de datos disponibles y la complejidad del comportamiento eléctrico han impulsado el uso de redes neuronales profundas. Las redes neuronales profundas consiste en una serie de capas de procesamiento que transforman los datos de entrada a través de funciones no lineales, lo que les permite capturar patrones complejos y relaciones no lineales en los datos. Estas características las hacen especialmente adecuadas para el pronóstico de demanda eléctrica, donde la relación entre la demanda y sus factores subyacentes puede ser altamente no lineal y dependiente del tiempo \parencite{hong2020}.
+
+Existen distintas familias de modelos de deep learning, entre ellas:
+\begin{itemize}
+    \item \textbf{Redes neuronales recurrentes (LSTM o GRU)}. Incorporando mecanismos de memoria para capturar dependencias temporales a largo plazo. Introduce una relación recursiva entre los estados internos y las entradas, lo que les permite procesar secuencias de datos de longitud variable y mantener información relevante a lo largo del tiempo. \parencite{hochreiter1997,abumohsen2023}.
+    \item \textbf{Redes neuronales convolucionales (CNN)}. Usa operaciones de convolución, es decir, filtros que se aplican a segmentos de la serie temporal para extraer características locales. Aunque originalmente diseñadas para procesamiento de imágenes, las CNN han demostrado ser efectivas en el análisis de series temporales al capturar patrones locales y estacionales \parencite{bai2018}.
+    \item \textbf{Transformers}. En lugar de procesar la secuencia estrictamente en orden, el modelo asigna distintos pesos de importancia a diferentes partes de la secuencia, lo que le permite capturar relaciones a largo plazo sin la necesidad de procesar los datos de forma secuencial. \parencite{wen2023,gao2023}
+    \item \textbf{Métodos de aprendizaje reforzado}. Enfoque donde un agente aprende a tomar decisiones a través de la interacción con un entorno, recibiendo recompensas o castigos en función de sus acciones. Su objetivo es maximizar la recompensa acumulada a lo largo del tiempo, lo que lo hace adecuado para problemas de control y optimización en sistemas eléctricos \parencite{goodfellow2016}.
+    \item \textbf{Redes neuronales de bloques residuales (N-BEATS)}. Red neuronal de bloques residuales que organiza el modelo en bloques donde cada bloque aprende una parte del problema y deja un residuo para el siguiente. La idea general es que, en vez de exigir que una sola red aprenda toda la función de una vez, se divida el aprendizaje en contribuciones sucesivas. \parencite{oreshkin2020}
+\end{itemize}
 
 \subsection{Arquitectura N-BEATS}
 
