@@ -1,0 +1,2 @@
+# Since the raw data is large and can be re-downloaded, we ignore it in git
+raw/
