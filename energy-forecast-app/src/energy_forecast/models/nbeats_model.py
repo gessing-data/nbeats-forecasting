@@ -32,6 +32,10 @@ class NBeatsModel(ForecastModel):
         model_kwargs: Mapping[str, Any] | None = None,
     ) -> None:
         self._validate_horizon(horizon)
+        if input_size is not None and (not isinstance(input_size, int) or input_size <= 0):
+            raise ValueError("input_size must be a positive integer")
+        if not isinstance(max_steps, int) or max_steps <= 0:
+            raise ValueError("max_steps must be a positive integer")
 
         self.horizon = horizon
         self.freq = freq
@@ -70,6 +74,10 @@ class NBeatsModel(ForecastModel):
 
         if self._forecaster is None:
             raise RuntimeError("NBeatsModel must be fitted before calling predict")
+        if not hasattr(self._forecaster, "dataset"):
+            raise RuntimeError(
+                "NBeatsModel was loaded without its training dataset; use predict_from_context"
+            )
 
         if horizon != self.horizon:
             raise ValueError(
@@ -138,14 +146,13 @@ class NBeatsModel(ForecastModel):
             "max_steps": self.max_steps,
             "model_kwargs": self.model_kwargs,
         }
-        config_path = artifact_path / self._CONFIG_FILE
-        config_path.write_text(json.dumps(config, indent=2, sort_keys=True), encoding="utf-8")
-
         self._forecaster.save(
             path=str(artifact_path / self._FORECASTER_DIR),
             save_dataset=False,
             overwrite=overwrite,
         )
+        config_path = artifact_path / self._CONFIG_FILE
+        config_path.write_text(json.dumps(config, indent=2, sort_keys=True), encoding="utf-8")
 
     @classmethod
     def load(cls, path: str | Path) -> "NBeatsModel":

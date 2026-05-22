@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from energy_forecast.models import NBeatsModel
-from energy_forecast.storage import build_run_id, save_dataframe, save_json
+from energy_forecast.storage import build_run_id, safe_artifact_name, save_dataframe, save_json
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,7 @@ def generate_nbeats_forecast(
     context: pd.DataFrame,
     dataset_name: str,
     run_id: str | None = None,
+    overwrite: bool = False,
 ) -> ForecastRunResult:
     """Load a saved N-BEATS model, forecast from context, and persist artifacts."""
     model = NBeatsModel.load(model_path)
@@ -42,15 +43,15 @@ def generate_nbeats_forecast(
     forecast_input = prepared_context.tail(model.input_size).reset_index(drop=True)
     forecast = model.predict_from_context(forecast_input, model.horizon)
 
-    resolved_run_id = run_id or build_run_id()
+    resolved_run_id = safe_artifact_name(run_id or build_run_id())
     root = Path(app_root)
-    basename = f"{_safe_name(dataset_name)}_nbeats_h{model.horizon}_{resolved_run_id}"
+    basename = f"{safe_artifact_name(dataset_name)}_nbeats_h{model.horizon}_{resolved_run_id}"
     forecast_input_path = root / "data" / "forecast_inputs" / f"{basename}_input.csv"
     forecast_path = root / "data" / "forecasts" / f"{basename}.csv"
     metadata_path = root / "data" / "forecast_runs" / f"{basename}.json"
 
-    save_dataframe(forecast_input, forecast_input_path)
-    save_dataframe(forecast, forecast_path)
+    save_dataframe(forecast_input, forecast_input_path, overwrite=overwrite)
+    save_dataframe(forecast, forecast_path, overwrite=overwrite)
     save_json(
         {
             "dataset": dataset_name,
@@ -67,6 +68,7 @@ def generate_nbeats_forecast(
             "forecast_path": str(forecast_path),
         },
         metadata_path,
+        overwrite=overwrite,
     )
 
     return ForecastRunResult(
@@ -76,10 +78,3 @@ def generate_nbeats_forecast(
         metadata_path=metadata_path,
         run_id=resolved_run_id,
     )
-
-
-def _safe_name(value: str) -> str:
-    safe = "".join(character if character.isalnum() or character in {"-", "_"} else "_" for character in value.strip())
-    if not safe:
-        raise ValueError("artifact name cannot be empty")
-    return safe

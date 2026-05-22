@@ -25,7 +25,7 @@ class ArtifactPaths:
 
 def build_run_id(now: datetime | None = None) -> str:
     current = now or datetime.now(UTC)
-    return current.strftime("%Y-%m-%d_%H%M%S")
+    return current.strftime("%Y-%m-%d_%H%M%S_%f")
 
 
 def build_artifact_paths(
@@ -37,14 +37,15 @@ def build_artifact_paths(
     run_id: str,
 ) -> ArtifactPaths:
     root = Path(app_root)
-    dataset = _safe_name(dataset_name)
-    model = _safe_name(model_name)
+    dataset = safe_artifact_name(dataset_name)
+    model = safe_artifact_name(model_name)
     h_segment = f"h{horizon}"
-    basename = f"{dataset}_{model}_{h_segment}_{run_id}"
+    safe_run_id = safe_artifact_name(run_id)
+    basename = f"{dataset}_{model}_{h_segment}_{safe_run_id}"
 
     return ArtifactPaths(
         root=root,
-        model_dir=root / "models" / "trained" / dataset / model / h_segment / run_id,
+        model_dir=root / "models" / "trained" / dataset / model / h_segment / safe_run_id,
         training_input_path=root / "data" / "training_inputs" / f"{basename}_train.csv",
         forecasts_dir=root / "data" / "forecasts",
         forecast_inputs_dir=root / "data" / "forecast_inputs",
@@ -52,16 +53,20 @@ def build_artifact_paths(
     )
 
 
-def save_dataframe(dataframe: pd.DataFrame, path: str | Path) -> Path:
+def save_dataframe(dataframe: pd.DataFrame, path: str | Path, *, overwrite: bool = False) -> Path:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and not overwrite:
+        raise FileExistsError(f"artifact already exists: {output_path}")
     dataframe.to_csv(output_path, index=False)
     return output_path
 
 
-def save_json(payload: dict[str, Any], path: str | Path) -> Path:
+def save_json(payload: dict[str, Any], path: str | Path, *, overwrite: bool = False) -> Path:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and not overwrite:
+        raise FileExistsError(f"artifact already exists: {output_path}")
     output_path.write_text(
         json.dumps(payload, indent=2, sort_keys=True, default=str),
         encoding="utf-8",
@@ -69,7 +74,10 @@ def save_json(payload: dict[str, Any], path: str | Path) -> Path:
     return output_path
 
 
-def _safe_name(value: str) -> str:
+def safe_artifact_name(value: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError("artifact name must be a string")
+
     safe = "".join(character if character.isalnum() or character in {"-", "_"} else "_" for character in value.strip())
     if not safe:
         raise ValueError("artifact name cannot be empty")

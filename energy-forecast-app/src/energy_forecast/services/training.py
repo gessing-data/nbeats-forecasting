@@ -10,7 +10,13 @@ from typing import Any, Literal
 import pandas as pd
 
 from energy_forecast.models import NBeatsModel
-from energy_forecast.storage import build_artifact_paths, build_run_id, save_dataframe, save_json
+from energy_forecast.storage import (
+    build_artifact_paths,
+    build_run_id,
+    safe_artifact_name,
+    save_dataframe,
+    save_json,
+)
 
 SelectionMode = Literal["all", "first_n", "row_range", "date_range"]
 
@@ -87,6 +93,7 @@ def train_nbeats_model(
 ) -> TrainingResult:
     """Train N-BEATS and persist the model plus exact training input."""
     model_kwargs = dict(model_kwargs or {})
+    selection_metadata = dict(selection_metadata or {})
     model = NBeatsModel(
         horizon=horizon,
         freq=freq,
@@ -94,10 +101,14 @@ def train_nbeats_model(
         max_steps=max_steps,
         model_kwargs=model_kwargs,
     )
-    train_df = NBeatsModel._prepare_series(series)
+    train_df = select_training_data(
+        series,
+        mode=selection_mode,
+        **_selection_kwargs(selection_mode, selection_metadata),
+    )
     _validate_training_size(train_df, model.input_size, horizon)
 
-    resolved_run_id = run_id or build_run_id()
+    resolved_run_id = safe_artifact_name(run_id or build_run_id())
     paths = build_artifact_paths(
         app_root,
         dataset_name=dataset_name,
@@ -105,25 +116,31 @@ def train_nbeats_model(
         horizon=horizon,
         run_id=resolved_run_id,
     )
+    metadata_path = paths.model_dir / "metadata.json"
+    _validate_artifact_outputs(
+        paths.training_input_path,
+        paths.model_dir,
+        metadata_path,
+        overwrite=overwrite_model,
+    )
 
-    save_dataframe(train_df, paths.training_input_path)
     model.fit(train_df)
     model.save(paths.model_dir, overwrite=overwrite_model)
+    save_dataframe(train_df, paths.training_input_path, overwrite=overwrite_model)
 
-    metadata_path = paths.model_dir / "metadata.json"
     metadata = {
         "dataset": dataset_name,
         "model": "nbeats",
         "trained_at": datetime.now(UTC).isoformat(),
         "source_file": str(source_file) if source_file is not None else None,
         "selection_mode": selection_mode,
-        "selection_metadata": dict(selection_metadata or {}),
+        "selection_metadata": selection_metadata,
         "train_rows": len(train_df),
         "start_timestamp": train_df["timestamp"].iloc[0].isoformat(),
         "end_timestamp": train_df["timestamp"].iloc[-1].isoformat(),
         "training_input_path": str(paths.training_input_path),
     }
-    save_json(metadata, metadata_path)
+    save_json(metadata, metadata_path, overwrite=overwrite_model)
 
     return TrainingResult(
         model_path=paths.model_dir,
@@ -132,6 +149,46 @@ def train_nbeats_model(
         run_id=resolved_run_id,
         model=model,
     )
+
+
+def _selection_kwargs(
+    selection_mode: SelectionMode,
+    selection_metadata: dict[str, Any],
+) -> dict[str, Any]:
+    allowed_keys_by_mode = {
+        "all": set(),
+        "first_n": {"first_n"},
+        "row_range": {"start_row", "end_row"},
+        "date_range": {"start_timestamp", "end_timestamp"},
+    }
+    allowed_keys = allowed_keys_by_mode[selection_mode]
+    unexpected_keys = set(selection_metadata).difference(allowed_keys)
+    if unexpected_keys:
+        unexpected = ", ".join(sorted(unexpected_keys))
+        raise ValueError(
+            f"unsupported selection metadata keys for {selection_mode}: {unexpected}"
+        )
+    return {key: value for key, value in selection_metadata.items() if value is not None}
+
+
+def _validate_artifact_outputs(
+    training_input_path: Path,
+    model_path: Path,
+    metadata_path: Path,
+    *,
+    overwrite: bool,
+) -> None:
+    if overwrite:
+        return
+
+    existing_paths = [
+        path
+        for path in (training_input_path, model_path, metadata_path)
+        if path.exists()
+    ]
+    if existing_paths:
+        existing = ", ".join(str(path) for path in existing_paths)
+        raise FileExistsError(f"artifact already exists: {existing}")
 
 
 def _validate_training_size(series: pd.DataFrame, input_size: int, horizon: int) -> None:

@@ -4,6 +4,7 @@ from .artifacts import (
     ArtifactPaths,
     build_artifact_paths,
     build_run_id,
+    safe_artifact_name,
     save_dataframe,
     save_json,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "ArtifactPaths",
     "build_artifact_paths",
     "build_run_id",
+    "safe_artifact_name",
     "save_dataframe",
     "save_json",
 ]
