@@ -69,7 +69,7 @@ def _model_info_grid(model: dict[str, object]) -> ft.ResponsiveRow:
         spacing=12,
         run_spacing=12,
         controls=[
-            _info_item(ft.Icons.PUBLIC, "Pais", str(model["country"])),
+            _info_item(ft.Icons.PUBLIC, "Zona", str(model["zone"])),
             _info_item(ft.Icons.TIMELINE, "Input size", f"{model['input_size']} horas"),
             _info_item(
                 ft.Icons.QUERY_STATS,

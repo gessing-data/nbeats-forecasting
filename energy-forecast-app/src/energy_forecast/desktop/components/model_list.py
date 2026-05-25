@@ -12,14 +12,16 @@ def build_model_list(page: ft.Page, models: list[ModelRecord]) -> list[ft.Contro
     return [
         model_card(
             name=str(model["name"]),
-            country=str(model["country"]),
-            country_code=str(model["country_code"]),
+            zone=str(model["zone"]),
+            zone_code=str(model["zone_code"]),
             description=str(model["description"]),
             input_size=int(model["input_size"]),
             horizon=int(model["horizon"]),
             frequency=str(model["frequency"]),
             max_steps=int(model["max_steps"]),
-            on_click=lambda _, model_id=model["id"]: navigate_to(page, f"/models/{model_id}"),
+            on_click=lambda _, model_id=model["id"]: navigate_to(
+                page, f"/models/{model_id}"
+            ),
         )
         for model in models
     ]

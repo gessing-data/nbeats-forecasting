@@ -28,7 +28,7 @@ def main(page: ft.Page) -> None:
 
     selection_state: dict[str, str] = {
         "query": "",
-        "country": "",
+        "zone": "",
         "horizon": "",
         "input_size": "",
         "frequency": "",
