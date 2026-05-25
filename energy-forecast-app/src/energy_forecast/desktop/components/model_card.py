@@ -3,8 +3,8 @@ import flet as ft
 
 def model_card(
     name: str,
-    country: str,
-    country_code: str,
+    zone: str,
+    zone_code: str,
     description: str,
     input_size: int,
     horizon: int,
@@ -17,9 +17,9 @@ def model_card(
         bgcolor=ft.Colors.WHITE,
         content=_card_container(
             controls=[
-                _model_header(name, country),
+                _model_header(name, zone),
                 _description(description),
-                _model_tags(country_code, input_size, horizon, frequency, max_steps),
+                _model_tags(zone_code, input_size, horizon, frequency, max_steps),
                 _use_model_button(on_click),
             ],
         ),
@@ -39,7 +39,7 @@ def _card_container(controls: list[ft.Control]) -> ft.Container:
     )
 
 
-def _model_header(name: str, country: str) -> ft.Row:
+def _model_header(name: str, zone: str) -> ft.Row:
     return ft.Row(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         vertical_alignment=ft.CrossAxisAlignment.START,
@@ -54,7 +54,7 @@ def _model_header(name: str, country: str) -> ft.Row:
                         weight=ft.FontWeight.W_600,
                         color="#0F172A",
                     ),
-                    _country_label(country),
+                    _zone_label(zone),
                 ],
             ),
             ft.Icon(ft.Icons.INSIGHTS_OUTLINED, size=22, color="#64748B"),
@@ -62,12 +62,12 @@ def _model_header(name: str, country: str) -> ft.Row:
     )
 
 
-def _country_label(country: str) -> ft.Row:
+def _zone_label(zone: str) -> ft.Row:
     return ft.Row(
         spacing=6,
         controls=[
             ft.Icon(ft.Icons.PUBLIC, size=15, color="#64748B"),
-            ft.Text(country, size=13, color="#64748B"),
+            ft.Text(zone, size=13, color="#64748B"),
         ],
     )
 
@@ -77,7 +77,7 @@ def _description(description: str) -> ft.Text:
 
 
 def _model_tags(
-    country_code: str,
+    zone_code: str,
     input_size: int,
     horizon: int,
     frequency: str,
@@ -88,7 +88,7 @@ def _model_tags(
         spacing=8,
         run_spacing=8,
         controls=[
-            _tag(country_code),
+            _tag(zone_code),
             _tag(f"{input_size} h input"),
             _tag(f"{horizon} h horizonte"),
             _tag(frequency),

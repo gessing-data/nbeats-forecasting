@@ -5,7 +5,6 @@ from energy_forecast.desktop.model_catalog import ModelRecord
 
 SelectionState = dict[str, str]
 
-COUNTRY_OPTIONS = ["DE", "FR", "ES", "AT", "BE"]
 HORIZON_OPTIONS = [24, 48, 168]
 INPUT_SIZE_OPTIONS = [168, 336, 720]
 FREQUENCY_OPTIONS = ["h"]
@@ -15,7 +14,7 @@ MAX_STEPS_OPTIONS = [100]
 def filter_models(
     models: list[ModelRecord],
     query: str,
-    country: str,
+    zone: str,
     horizon: str,
     input_size: str,
     frequency: str,
@@ -28,7 +27,7 @@ def filter_models(
         searchable = _searchable_text(model)
         if query_terms and not all(term in searchable for term in query_terms):
             continue
-        if country and model["country_code"] != country:
+        if zone and model["zone_code"] != zone:
             continue
         if horizon and str(model["horizon"]) != horizon:
             continue
@@ -56,7 +55,7 @@ def build_filter_button() -> ft.IconButton:
 def update_filter_badge(filter_button: ft.IconButton, state: SelectionState) -> None:
     filters_active = any(
         state.get(key, "")
-        for key in ("country", "horizon", "input_size", "frequency", "max_steps")
+        for key in ("zone", "horizon", "input_size", "frequency", "max_steps")
     )
     filter_button.badge = "" if filters_active else None
 
@@ -68,7 +67,7 @@ def build_filters_dialog(
     on_apply: ft.EventHandler,
     on_clear: ft.EventHandler,
 ) -> ft.AlertDialog:
-    country_filter = _country_filter(state)
+    zone_filter = _zone_filter(models, state)
     horizon_filter = _horizon_filter(state)
     input_size_filter = _input_size_filter(state)
     frequency_filter = _frequency_filter(state)
@@ -78,7 +77,7 @@ def build_filters_dialog(
         page.pop_dialog()
 
     def apply_filters(event: ft.ControlEvent) -> None:
-        state["country"] = country_filter.value or ""
+        state["zone"] = zone_filter.value or ""
         state["horizon"] = horizon_filter.value or ""
         state["input_size"] = input_size_filter.value or ""
         state["frequency"] = frequency_filter.value or ""
@@ -87,12 +86,12 @@ def build_filters_dialog(
         on_apply(event)
 
     def clear_filters(event: ft.ControlEvent) -> None:
-        country_filter.value = ""
+        zone_filter.value = ""
         horizon_filter.value = ""
         input_size_filter.value = ""
         frequency_filter.value = ""
         max_steps_filter.value = ""
-        state["country"] = ""
+        state["zone"] = ""
         state["horizon"] = ""
         state["input_size"] = ""
         state["frequency"] = ""
@@ -112,7 +111,7 @@ def build_filters_dialog(
         title=_dialog_title(),
         content=_dialog_content(
             controls=[
-                country_filter,
+                zone_filter,
                 horizon_filter,
                 input_size_filter,
                 frequency_filter,
@@ -128,12 +127,26 @@ def build_filters_dialog(
     )
 
 
-def _country_filter(state: SelectionState) -> ft.Dropdown:
+def _zone_filter(models: list[ModelRecord], state: SelectionState) -> ft.Dropdown:
     return _dropdown(
-        label="País",
-        options=_dropdown_options(COUNTRY_OPTIONS, "Todos"),
-        value=state.get("country", ""),
+        label="Zona",
+        options=_zone_options(models),
+        value=state.get("zone", ""),
     )
+
+
+def _zone_options(models: list[ModelRecord]) -> list[ft.dropdown.Option]:
+    zones = sorted(
+        {
+            (str(model.get("zone_code", "")), str(model.get("zone", "")))
+            for model in models
+            if model.get("zone_code")
+        },
+        key=lambda zone: zone[1].lower(),
+    )
+    return [ft.dropdown.Option("", "Todas")] + [
+        ft.dropdown.Option(code, f"{name} ({code})") for code, name in zones
+    ]
 
 
 def _horizon_filter(state: SelectionState) -> ft.Dropdown:
@@ -173,8 +186,8 @@ def _searchable_text(model: ModelRecord) -> str:
     values = [
         model.get("name", ""),
         model.get("description", ""),
-        model.get("country", ""),
-        model.get("country_code", ""),
+        model.get("zone", ""),
+        model.get("zone_code", ""),
         model.get("dataset", ""),
         model.get("model_type", ""),
         model.get("frequency", ""),

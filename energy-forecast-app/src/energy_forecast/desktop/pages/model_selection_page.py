@@ -28,7 +28,7 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
         filtered = filter_models(
             models=models,
             query=state["query"],
-            country=state.get("country", ""),
+            zone=state.get("zone", ""),
             horizon=state.get("horizon", ""),
             input_size=state.get("input_size", ""),
             frequency=state.get("frequency", ""),

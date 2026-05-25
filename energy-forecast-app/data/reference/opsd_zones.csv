@@ -1,0 +1,58 @@
+code,name,kind,source_variable,source_description
+AT,Austria,country,load_actual_entsoe_transparency,Total load in Austria in MW as published on ENTSO-E Transparency Platform
+BE,Belgium,country,load_actual_entsoe_transparency,Total load in Belgium in MW as published on ENTSO-E Transparency Platform
+BG,Bulgaria,country,load_actual_entsoe_transparency,Total load in Bulgaria in MW as published on ENTSO-E Transparency Platform
+CH,Switzerland,country,load_actual_entsoe_transparency,Total load in Switzerland in MW as published on ENTSO-E Transparency Platform
+CY,Cyprus,country,load_actual_entsoe_transparency,Total load in Cyprus in MW as published on ENTSO-E Transparency Platform
+CZ,Czech Republic,country,load_actual_entsoe_transparency,Total load in Czech Republic in MW as published on ENTSO-E Transparency Platform
+DE,Germany,country,load_actual_entsoe_transparency,Total load in Germany in MW as published on ENTSO-E Transparency Platform
+DE_50hertz,50Hertz,control_area,load_actual_entsoe_transparency,Total load in 50Hertz (control area) in MW as published on ENTSO-E Transparency Platform
+DE_LU,DE-LU,bidding_zone,load_actual_entsoe_transparency,Total load in DE-LU (bidding zone) in MW as published on ENTSO-E Transparency Platform
+DE_amprion,Amprion,control_area,load_actual_entsoe_transparency,Total load in Amprion (control area) in MW as published on ENTSO-E Transparency Platform
+DE_tennet,TenneT GER,control_area,load_actual_entsoe_transparency,Total load in TenneT GER (control area) in MW as published on ENTSO-E Transparency Platform
+DE_transnetbw,TransnetBW,control_area,load_actual_entsoe_transparency,Total load in TransnetBW (control area) in MW as published on ENTSO-E Transparency Platform
+DK,Denmark,country,load_actual_entsoe_transparency,Total load in Denmark in MW as published on ENTSO-E Transparency Platform
+DK_1,DK1,bidding_zone,load_actual_entsoe_transparency,Total load in DK1 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+DK_2,DK2,bidding_zone,load_actual_entsoe_transparency,Total load in DK2 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+EE,Estonia,country,load_actual_entsoe_transparency,Total load in Estonia in MW as published on ENTSO-E Transparency Platform
+ES,Spain,country,load_actual_entsoe_transparency,Total load in Spain in MW as published on ENTSO-E Transparency Platform
+FI,Finland,country,load_actual_entsoe_transparency,Total load in Finland in MW as published on ENTSO-E Transparency Platform
+FR,France,country,load_actual_entsoe_transparency,Total load in France in MW as published on ENTSO-E Transparency Platform
+GB_GBN,Great Britain,country,load_actual_entsoe_transparency,Total load in Great Britain in MW as published on ENTSO-E Transparency Platform
+GB_NIR,Northern Ireland,country,load_actual_entsoe_transparency,Total load in Northern Ireland in MW as published on ENTSO-E Transparency Platform
+GB_UKM,United Kingdom,country,load_actual_entsoe_transparency,Total load in United Kingdom in MW as published on ENTSO-E Transparency Platform
+GR,Greece,country,load_actual_entsoe_transparency,Total load in Greece in MW as published on ENTSO-E Transparency Platform
+HR,Croatia,country,load_actual_entsoe_transparency,Total load in Croatia in MW as published on ENTSO-E Transparency Platform
+HU,Hungary,country,load_actual_entsoe_transparency,Total load in Hungary in MW as published on ENTSO-E Transparency Platform
+IE,Ireland,country,load_actual_entsoe_transparency,Total load in Ireland in MW as published on ENTSO-E Transparency Platform
+IE_sem,Ireland - (SEM),bidding_zone,load_actual_entsoe_transparency,Total load in Ireland - (SEM) (bidding zone) in MW as published on ENTSO-E Transparency Platform
+IT,Italy,country,load_actual_entsoe_transparency,Total load in Italy in MW as published on ENTSO-E Transparency Platform
+IT_CNOR,IT-Centre-North,bidding_zone,load_actual_entsoe_transparency,Total load in IT-Centre-North (bidding zone) in MW as published on ENTSO-E Transparency Platform
+IT_CSUD,IT-Centre-South,bidding_zone,load_actual_entsoe_transparency,Total load in IT-Centre-South (bidding zone) in MW as published on ENTSO-E Transparency Platform
+IT_NORD,IT-North,bidding_zone,load_actual_entsoe_transparency,Total load in IT-North (bidding zone) in MW as published on ENTSO-E Transparency Platform
+IT_SARD,IT-Sardinia,bidding_zone,load_actual_entsoe_transparency,Total load in IT-Sardinia (bidding zone) in MW as published on ENTSO-E Transparency Platform
+IT_SICI,IT-Sicily,bidding_zone,load_actual_entsoe_transparency,Total load in IT-Sicily (bidding zone) in MW as published on ENTSO-E Transparency Platform
+IT_SUD,IT-South,bidding_zone,load_actual_entsoe_transparency,Total load in IT-South (bidding zone) in MW as published on ENTSO-E Transparency Platform
+LT,Lithuania,country,load_actual_entsoe_transparency,Total load in Lithuania in MW as published on ENTSO-E Transparency Platform
+LU,Luxembourg,country,load_actual_entsoe_transparency,Total load in Luxembourg in MW as published on ENTSO-E Transparency Platform
+LV,Latvia,country,load_actual_entsoe_transparency,Total load in Latvia in MW as published on ENTSO-E Transparency Platform
+ME,Montenegro,country,load_actual_entsoe_transparency,Total load in Montenegro in MW as published on ENTSO-E Transparency Platform
+NL,Netherlands,country,load_actual_entsoe_transparency,Total load in Netherlands in MW as published on ENTSO-E Transparency Platform
+NO,Norway,country,load_actual_entsoe_transparency,Total load in Norway in MW as published on ENTSO-E Transparency Platform
+NO_1,NO1,bidding_zone,load_actual_entsoe_transparency,Total load in NO1 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+NO_2,NO2,bidding_zone,load_actual_entsoe_transparency,Total load in NO2 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+NO_3,NO3,bidding_zone,load_actual_entsoe_transparency,Total load in NO3 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+NO_4,NO4,bidding_zone,load_actual_entsoe_transparency,Total load in NO4 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+NO_5,NO5,bidding_zone,load_actual_entsoe_transparency,Total load in NO5 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+PL,Poland,country,load_actual_entsoe_transparency,Total load in Poland in MW as published on ENTSO-E Transparency Platform
+PT,Portugal,country,load_actual_entsoe_transparency,Total load in Portugal in MW as published on ENTSO-E Transparency Platform
+RO,Romania,country,load_actual_entsoe_transparency,Total load in Romania in MW as published on ENTSO-E Transparency Platform
+RS,Serbia,country,load_actual_entsoe_transparency,Total load in Serbia in MW as published on ENTSO-E Transparency Platform
+SE,Sweden,country,load_actual_entsoe_transparency,Total load in Sweden in MW as published on ENTSO-E Transparency Platform
+SE_1,SE1,bidding_zone,load_actual_entsoe_transparency,Total load in SE1 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+SE_2,SE2,bidding_zone,load_actual_entsoe_transparency,Total load in SE2 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+SE_3,SE3,bidding_zone,load_actual_entsoe_transparency,Total load in SE3 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+SE_4,SE4,bidding_zone,load_actual_entsoe_transparency,Total load in SE4 (bidding zone) in MW as published on ENTSO-E Transparency Platform
+SI,Slovenia,country,load_actual_entsoe_transparency,Total load in Slovenia in MW as published on ENTSO-E Transparency Platform
+SK,Slovakia,country,load_actual_entsoe_transparency,Total load in Slovakia in MW as published on ENTSO-E Transparency Platform
+UA,Ukraine,country,load_actual_entsoe_transparency,Total load in Ukraine in MW as published on ENTSO-E Transparency Platform
