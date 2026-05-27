@@ -1,5 +1,6 @@
 import flet as ft
 
+from energy_forecast.app_paths import AppPaths
 from energy_forecast.desktop.components.model_filters import (
     SelectionState,
     build_filter_button,
@@ -16,8 +17,10 @@ MAX_CONTENT_WIDTH = 920
 PAGE_PADDING = 24
 
 
-def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Control:
-    models = list_pretrained_models()
+def build_model_selection_page(
+    page: ft.Page, state: SelectionState, paths: AppPaths
+) -> ft.Control:
+    models = list_pretrained_models(paths)
     model_list = ft.Column(spacing=12)
     result_count = ft.Text(size=13, color="#64748B")
     search = _search_field(state)

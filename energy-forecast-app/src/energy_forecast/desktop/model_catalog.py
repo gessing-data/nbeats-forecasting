@@ -1,52 +1,54 @@
 import json
 from pathlib import Path
 
+from energy_forecast.app_paths import AppPaths, resolve_app_paths
 from energy_forecast.data.opsd_zones import load_opsd_zone_names
 
 
 ModelRecord = dict[str, object]
 
-APP_ROOT = Path(__file__).resolve().parents[3]
-TRAINED_MODELS_ROOT = APP_ROOT / "models" / "trained"
 
-
-def list_pretrained_models() -> list[ModelRecord]:
-    if not TRAINED_MODELS_ROOT.exists():
+def list_pretrained_models(paths: AppPaths | None = None) -> list[ModelRecord]:
+    app_paths = paths or resolve_app_paths()
+    trained_models_root = app_paths.trained_models_dir
+    if not trained_models_root.exists():
         return []
 
-    zone_names = load_opsd_zone_names()
+    zone_names = load_opsd_zone_names(app_paths)
     models = [
         model
-        for model_dir in sorted(TRAINED_MODELS_ROOT.glob("*/*/*"))
+        for model_dir in sorted(trained_models_root.glob("*/*/*/*"))
         if model_dir.is_dir()
-        if (model := _load_model_record(model_dir, zone_names)) is not None
+        if (model := _load_model_record(model_dir, zone_names, trained_models_root)) is not None
     ]
     return models
 
 
-def find_pretrained_model(model_id: str) -> ModelRecord | None:
+def find_pretrained_model(
+    model_id: str, paths: AppPaths | None = None
+) -> ModelRecord | None:
     return next(
-        (model for model in list_pretrained_models() if model["id"] == model_id), None
+        (model for model in list_pretrained_models(paths) if model["id"] == model_id),
+        None,
     )
 
 
 def _load_model_record(
-    model_dir: Path, zone_names: dict[str, str]
+    model_dir: Path, zone_names: dict[str, str], trained_models_root: Path
 ) -> ModelRecord | None:
-    config = _read_json(model_dir / "model_config.json")
-    metadata = _read_json(model_dir / "model_metadata.json")
+    relative_model_dir = model_dir.relative_to(trained_models_root)
+    config = _read_json(model_dir / "config.json")
+    metadata = _read_json(model_dir / "metadata.json")
     if config is None or metadata is None:
         return None
 
-    dataset = str(metadata.get("dataset") or model_dir.parents[1].name)
-    model_type = str(metadata.get("model") or "model")
+    dataset = str(metadata.get("dataset") or relative_model_dir.parts[0])
+    model_type = str(metadata.get("model") or relative_model_dir.parts[1])
     input_size = int(config.get("input_size", 0))
     horizon = int(config.get("horizon", 0))
     max_steps = int(config.get("max_steps", 0))
     frequency = str(config.get("freq", ""))
     zone = zone_names.get(dataset, dataset)
-
-    relative_model_dir = model_dir.relative_to(TRAINED_MODELS_ROOT)
 
     return {
         "id": "-".join(relative_model_dir.parts),

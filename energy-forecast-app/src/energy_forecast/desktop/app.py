@@ -1,5 +1,6 @@
 import flet as ft
 
+from energy_forecast.app_paths import prepare_workspace
 from energy_forecast.desktop.components.app_navigation import build_app_bar
 from energy_forecast.desktop.model_catalog import find_pretrained_model
 from energy_forecast.desktop.navigation import navigate_to
@@ -16,6 +17,8 @@ BACKGROUND_COLOR = "#F8FAFC"
 
 
 def main(page: ft.Page) -> None:
+    paths = prepare_workspace()
+
     page.title = "Energy Forecast App"
     page.bgcolor = BACKGROUND_COLOR
     page.padding = 0
@@ -54,7 +57,7 @@ def main(page: ft.Page) -> None:
     def build_model_selection_view() -> ft.View:
         return build_view(
             "/",
-            build_model_selection_page(page, selection_state),
+            build_model_selection_page(page, selection_state, paths),
             show_title=True,
             floating_action_button=build_create_model_button(),
         )
@@ -63,7 +66,7 @@ def main(page: ft.Page) -> None:
         return build_view("/history", build_forecast_history_page(), show_title=True)
 
     def build_settings_view() -> ft.View:
-        return build_view("/settings", build_settings_page(), show_title=True)
+        return build_view("/settings", build_settings_page(page, paths), show_title=True)
 
     def build_model_workspace_view(route: str, model: dict[str, object]) -> ft.View:
         return build_view(route, build_forecast_workspace_page(model))
@@ -76,7 +79,7 @@ def main(page: ft.Page) -> None:
             page.views.append(build_model_selection_view())
         elif route.match("/models/:model_id"):
             model_id = str(route.model_id)
-            model = find_pretrained_model(model_id)
+            model = find_pretrained_model(model_id, paths)
             if model is None:
                 navigate_to(page, "/")
                 return
