@@ -1,8 +1,8 @@
 import flet as ft
 
-from energy_forecast.desktop.components.model_card import model_card
-from energy_forecast.desktop.model_catalog import ModelRecord
+from energy_forecast.desktop.features.model_selection.components.model_card import model_card
 from energy_forecast.desktop.navigation import navigate_to
+from energy_forecast.storage.model_catalog import ModelRecord
 
 
 def build_model_list(

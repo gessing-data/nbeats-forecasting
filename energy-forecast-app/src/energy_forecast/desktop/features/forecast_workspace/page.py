@@ -1,21 +1,10 @@
 import flet as ft
 
+from energy_forecast.desktop.layout import page_shell
+
 
 def build_forecast_workspace_page(model: dict[str, object]) -> ft.Control:
-    return _page_shell(_workspace_content(model))
-
-
-def _page_shell(content: ft.Control) -> ft.Container:
-    return ft.Container(
-        expand=True,
-        bgcolor="#F8FAFC",
-        alignment=ft.Alignment(0, -1),
-        content=ft.Container(
-            width=968,
-            padding=ft.Padding(24, 28, 24, 28),
-            content=content,
-        ),
-    )
+    return page_shell(_workspace_content(model))
 
 
 def _workspace_content(model: dict[str, object]) -> ft.Column:

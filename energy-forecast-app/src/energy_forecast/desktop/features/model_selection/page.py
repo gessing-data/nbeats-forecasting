@@ -1,21 +1,17 @@
 import flet as ft
 
 from energy_forecast.app_paths import AppPaths
-from energy_forecast.desktop.components.model_filters import (
+from energy_forecast.desktop.features.model_selection.components.model_filters import (
     SelectionState,
     build_filter_button,
     build_filters_dialog,
     filter_models,
     update_filter_badge,
 )
-from energy_forecast.desktop.components.model_list import build_model_list
+from energy_forecast.desktop.features.model_selection.components.model_list import build_model_list
+from energy_forecast.desktop.layout import page_shell
 from energy_forecast.desktop.navigation import navigate_to
-from energy_forecast.desktop.model_catalog import delete_pretrained_model, list_pretrained_models
-
-
-BACKGROUND_COLOR = "#F8FAFC"
-MAX_CONTENT_WIDTH = 920
-PAGE_PADDING = 24
+from energy_forecast.storage.model_catalog import delete_pretrained_model, list_pretrained_models
 
 
 def build_model_selection_page(
@@ -99,7 +95,7 @@ def build_model_selection_page(
 
     refresh_models()
 
-    return _page_shell(
+    return page_shell(
         ft.Column(
             spacing=18,
             controls=[
@@ -109,19 +105,6 @@ def build_model_selection_page(
                 model_list,
             ],
         )
-    )
-
-
-def _page_shell(content: ft.Control) -> ft.Container:
-    return ft.Container(
-        expand=True,
-        bgcolor=BACKGROUND_COLOR,
-        alignment=ft.Alignment(0, -1),
-        content=ft.Container(
-            width=MAX_CONTENT_WIDTH + (PAGE_PADDING * 2),
-            padding=ft.Padding(PAGE_PADDING, 28, PAGE_PADDING, 28),
-            content=content,
-        ),
     )
 
 
