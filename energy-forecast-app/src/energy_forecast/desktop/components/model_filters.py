@@ -182,7 +182,7 @@ def _max_steps_filter(state: SelectionState) -> ft.Dropdown:
 
 
 def _searchable_text(model: ModelRecord) -> str:
-    metadata = model.get("model_metadata", {})
+    metadata = model.get("metadata", {})
     values = [
         model.get("name", ""),
         model.get("description", ""),
@@ -200,7 +200,7 @@ def _searchable_text(model: ModelRecord) -> str:
             [
                 metadata.get("selection_mode", ""),
                 metadata.get("source_file", ""),
-                metadata.get("training_input_path", ""),
+                metadata.get("logs_path", ""),
             ]
         )
     return _normalize(" ".join(str(value) for value in values))

@@ -11,16 +11,18 @@ def model_card(
     frequency: str,
     max_steps: int,
     on_click: ft.EventHandler,
+    on_delete: ft.EventHandler,
 ) -> ft.Card:
     return ft.Card(
         elevation=0,
         bgcolor=ft.Colors.WHITE,
+        width=float("inf"),
         content=_card_container(
             controls=[
                 _model_header(name, zone),
                 _description(description),
                 _model_tags(zone_code, input_size, horizon, frequency, max_steps),
-                _use_model_button(on_click),
+                _model_actions(on_click, on_delete),
             ],
         ),
     )
@@ -29,6 +31,7 @@ def model_card(
 def _card_container(controls: list[ft.Control]) -> ft.Container:
     return ft.Container(
         padding=20,
+        width=float("inf"),
         border=_border("#E2E8F0"),
         border_radius=14,
         content=ft.Column(
@@ -104,6 +107,27 @@ def _use_model_button(on_click: ft.EventHandler) -> ft.TextButton:
         icon_color="#0F172A",
         style=ft.ButtonStyle(color="#0F172A"),
         on_click=on_click,
+    )
+
+
+def _delete_model_button(on_delete: ft.EventHandler) -> ft.TextButton:
+    return ft.TextButton(
+        "Borrar",
+        icon=ft.Icons.DELETE_OUTLINE,
+        icon_color="#DC2626",
+        style=ft.ButtonStyle(color="#DC2626"),
+        on_click=on_delete,
+    )
+
+
+def _model_actions(on_click: ft.EventHandler, on_delete: ft.EventHandler) -> ft.Row:
+    return ft.Row(
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        wrap=True,
+        controls=[
+            _delete_model_button(on_delete),
+            _use_model_button(on_click),
+        ],
     )
 
 
