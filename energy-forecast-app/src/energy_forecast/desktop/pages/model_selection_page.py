@@ -8,7 +8,8 @@ from energy_forecast.desktop.components.model_filters import (
     update_filter_badge,
 )
 from energy_forecast.desktop.components.model_list import build_model_list
-from energy_forecast.desktop.model_catalog import list_pretrained_models
+from energy_forecast.desktop.navigation import navigate_to
+from energy_forecast.desktop.model_catalog import delete_pretrained_model, list_pretrained_models
 
 
 BACKGROUND_COLOR = "#F8FAFC"
@@ -21,9 +22,13 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
     model_list = ft.Column(spacing=12)
     result_count = ft.Text(size=13, color="#64748B")
     search = _search_field(state)
+    refresh_button = _refresh_button()
     filter_button = build_filter_button()
 
-    def refresh_models(event: ft.ControlEvent | None = None) -> None:
+    def refresh_models(event: ft.ControlEvent | None = None, *, reload: bool = False) -> None:
+        nonlocal models
+        if reload:
+            models = list_pretrained_models()
         state["query"] = search.value or ""
         filtered = filter_models(
             models=models,
@@ -35,7 +40,7 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
             max_steps=state.get("max_steps", ""),
         )
 
-        model_list.controls = build_model_list(page, filtered)
+        model_list.controls = build_model_list(page, filtered, on_delete=confirm_delete_model)
         result_count.value = f"{len(filtered)} modelo{'s' if len(filtered) != 1 else ''} disponible{'s' if len(filtered) != 1 else ''}"
         update_filter_badge(filter_button, state)
         if event is not None:
@@ -52,8 +57,42 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
             )
         )
 
+    def confirm_delete_model(_: ft.ControlEvent, model: dict[str, object]) -> None:
+        model_id = str(model["id"])
+        title = str(model.get("title") or model.get("name") or model_id)
+
+        def close_dialog(_: ft.ControlEvent | None = None) -> None:
+            page.pop_dialog()
+
+        def delete_model(_: ft.ControlEvent) -> None:
+            try:
+                delete_pretrained_model(model_id)
+            except Exception as exc:  # noqa: BLE001 - deletion errors should stay in UI.
+                page.pop_dialog()
+                page.snack_bar = ft.SnackBar(ft.Text(f"No se pudo borrar el modelo: {exc}"))
+                page.snack_bar.open = True
+                page.update()
+                return
+            page.pop_dialog()
+            refresh_models(reload=True)
+            page.update()
+
+        page.show_dialog(
+            ft.AlertDialog(
+                modal=True,
+                title=ft.Text("Borrar modelo"),
+                content=ft.Text(f"Esta accion eliminara permanentemente '{title}'."),
+                actions=[
+                    ft.TextButton("Cancelar", on_click=close_dialog),
+                    ft.TextButton("Borrar", style=ft.ButtonStyle(color="#DC2626"), on_click=delete_model),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+        )
+
     search.on_change = refresh_models
     filter_button.on_click = open_filters
+    refresh_button.on_click = lambda event: refresh_models(event, reload=True)
 
     refresh_models()
 
@@ -62,7 +101,7 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
             spacing=18,
             controls=[
                 _page_header(),
-                _search_toolbar(search, filter_button),
+                _search_toolbar(search, refresh_button, filter_button),
                 result_count,
                 model_list,
             ],
@@ -102,11 +141,11 @@ def _page_header() -> ft.Column:
     )
 
 
-def _search_toolbar(search: ft.TextField, filter_button: ft.IconButton) -> ft.Row:
+def _search_toolbar(search: ft.TextField, refresh_button: ft.IconButton, filter_button: ft.IconButton) -> ft.Row:
     return ft.Row(
         spacing=12,
         vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[search, filter_button],
+        controls=[search, refresh_button, filter_button],
     )
 
 
@@ -122,11 +161,19 @@ def _search_field(state: SelectionState) -> ft.TextField:
     )
 
 
-def build_create_model_button() -> ft.FloatingActionButton:
+def _refresh_button() -> ft.IconButton:
+    return ft.IconButton(
+        icon=ft.Icons.REFRESH,
+        icon_color="#334155",
+        tooltip="Recargar modelos",
+    )
+
+
+def build_create_model_button(page: ft.Page, disabled: bool = False) -> ft.FloatingActionButton:
     return ft.FloatingActionButton(
         content=ft.Icon(ft.Icons.ADD, color=ft.Colors.WHITE, size=24),
-        bgcolor="#0F172A",
-        tooltip="Crear nuevo modelo",
+        bgcolor="#94A3B8" if disabled else "#0F172A",
+        tooltip="Hay un entrenamiento en curso" if disabled else "Crear nuevo modelo",
         shape=ft.RoundedRectangleBorder(radius=14),
-        on_click=lambda _: None,
+        on_click=None if disabled else lambda _: navigate_to(page, "/models/new"),
     )

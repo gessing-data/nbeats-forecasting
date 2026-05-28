@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 import json
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pandas as pd
 
@@ -16,8 +17,8 @@ class ArtifactPaths:
     """Resolved filesystem paths for one model training run."""
 
     root: Path
+    model_id: str
     model_dir: Path
-    training_input_path: Path
     forecasts_dir: Path
     forecast_inputs_dir: Path
     forecast_runs_dir: Path
@@ -28,25 +29,34 @@ def build_run_id(now: datetime | None = None) -> str:
     return current.strftime("%Y-%m-%d_%H%M%S_%f")
 
 
+def build_model_id(models_root: str | Path, model_id: str | None = None) -> str:
+    if model_id is not None:
+        safe_model_id = safe_artifact_name(model_id)
+        if (Path(models_root) / safe_model_id).exists():
+            raise FileExistsError(f"model id already exists: {safe_model_id}")
+        return safe_model_id
+
+    root = Path(models_root)
+    for _ in range(5):
+        candidate = str(uuid4())
+        if not (root / candidate).exists():
+            return candidate
+    raise FileExistsError("could not generate a unique model id")
+
+
 def build_artifact_paths(
     app_root: str | Path,
     *,
-    dataset_name: str,
-    model_name: str,
-    horizon: int,
-    run_id: str,
+    model_id: str | None = None,
 ) -> ArtifactPaths:
     root = Path(app_root)
-    dataset = safe_artifact_name(dataset_name)
-    model = safe_artifact_name(model_name)
-    h_segment = f"h{horizon}"
-    safe_run_id = safe_artifact_name(run_id)
-    basename = f"{dataset}_{model}_{h_segment}_{safe_run_id}"
+    models_root = root / "models"
+    resolved_model_id = build_model_id(models_root, model_id)
 
     return ArtifactPaths(
         root=root,
-        model_dir=root / "models" / "trained" / dataset / model / h_segment / safe_run_id,
-        training_input_path=root / "data" / "training_inputs" / f"{basename}_train.csv",
+        model_id=resolved_model_id,
+        model_dir=models_root / resolved_model_id,
         forecasts_dir=root / "data" / "forecasts",
         forecast_inputs_dir=root / "data" / "forecast_inputs",
         forecast_runs_dir=root / "data" / "forecast_runs",
