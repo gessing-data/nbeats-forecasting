@@ -108,10 +108,12 @@ def _datasets_section(initialized: bool) -> ft.Container:
 
 
 def _settings_card(content: ft.Control) -> ft.Container:
+    border_side = ft.BorderSide(1, "#E2E8F0")
+
     return ft.Container(
         padding=ft.Padding(18, 18, 18, 18),
         bgcolor="#FFFFFF",
-        border=ft.border.all(1, "#E2E8F0"),
+        border=ft.Border(border_side, border_side, border_side, border_side),
         border_radius=16,
         content=content,
     )
