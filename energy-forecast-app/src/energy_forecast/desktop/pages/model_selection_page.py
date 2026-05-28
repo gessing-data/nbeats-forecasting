@@ -1,5 +1,6 @@
 import flet as ft
 
+from energy_forecast.app_paths import AppPaths
 from energy_forecast.desktop.components.model_filters import (
     SelectionState,
     build_filter_button,
@@ -17,8 +18,10 @@ MAX_CONTENT_WIDTH = 920
 PAGE_PADDING = 24
 
 
-def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Control:
-    models = list_pretrained_models()
+def build_model_selection_page(
+    page: ft.Page, state: SelectionState, paths: AppPaths
+) -> ft.Control:
+    models = list_pretrained_models(paths)
     model_list = ft.Column(spacing=12)
     result_count = ft.Text(size=13, color="#64748B")
     search = _search_field(state)
@@ -28,7 +31,7 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
     def refresh_models(event: ft.ControlEvent | None = None, *, reload: bool = False) -> None:
         nonlocal models
         if reload:
-            models = list_pretrained_models()
+            models = list_pretrained_models(paths)
         state["query"] = search.value or ""
         filtered = filter_models(
             models=models,
@@ -66,7 +69,7 @@ def build_model_selection_page(page: ft.Page, state: SelectionState) -> ft.Contr
 
         def delete_model(_: ft.ControlEvent) -> None:
             try:
-                delete_pretrained_model(model_id)
+                delete_pretrained_model(model_id, paths)
             except Exception as exc:  # noqa: BLE001 - deletion errors should stay in UI.
                 page.pop_dialog()
                 page.snack_bar = ft.SnackBar(ft.Text(f"No se pudo borrar el modelo: {exc}"))

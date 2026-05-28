@@ -10,6 +10,7 @@ from typing import Any
 import flet as ft
 import pandas as pd
 
+from energy_forecast.app_paths import AppPaths
 from energy_forecast.storage import safe_artifact_name
 
 
@@ -19,9 +20,6 @@ PRIMARY_TEXT = "#0F172A"
 SECONDARY_TEXT = "#64748B"
 MAX_CONTENT_WIDTH = 920
 PAGE_PADDING = 24
-APP_ROOT = Path(__file__).resolve().parents[4]
-PROCESSED_DATA_ROOT = APP_ROOT / "data" / "processed"
-IMPORTED_DATA_ROOT = APP_ROOT / "data" / "imported"
 
 
 @dataclass(frozen=True)
@@ -37,9 +35,12 @@ class DatasetInfo:
 
 def build_model_creation_page(
     page: ft.Page,
+    paths: AppPaths,
     on_create: Any | None = None,
     on_success: ft.ControlEventHandler | None = None,
 ) -> ft.Control:
+    processed_data_root = paths.processed_data_dir
+    imported_data_root = paths.imported_data_dir
     state: dict[str, Any] = {
         "datasets": [],
         "selected": None,
@@ -101,7 +102,7 @@ def build_model_creation_page(
     page.services.append(file_picker)
 
     def refresh_datasets() -> None:
-        state["datasets"] = _load_datasets()
+        state["datasets"] = _load_datasets(processed_data_root, imported_data_root)
         selected = state.get("selected")
         if selected and not any(
             item.path == selected.path for item in state["datasets"]
@@ -213,7 +214,7 @@ def build_model_creation_page(
 
     def import_file(source: Path) -> None:
         try:
-            imported_path = _import_dataset(source)
+            imported_path = _import_dataset(source, imported_data_root)
         except Exception as exc:  # noqa: BLE001 - UI must surface validation failures.
             _show_error(error, str(exc), page)
             return
@@ -309,11 +310,11 @@ def build_model_creation_page(
     )
 
 
-def _load_datasets() -> list[DatasetInfo]:
+def _load_datasets(processed_data_root: Path, imported_data_root: Path) -> list[DatasetInfo]:
     datasets: list[DatasetInfo] = []
     for root, origin in (
-        (PROCESSED_DATA_ROOT, "Aplicacion"),
-        (IMPORTED_DATA_ROOT, "Importado"),
+        (processed_data_root, "Aplicacion"),
+        (imported_data_root, "Importado"),
     ):
         if not root.exists():
             continue
@@ -381,13 +382,13 @@ def _format_timedelta(value: pd.Timedelta) -> str:
     return f"{seconds}s"
 
 
-def _import_dataset(source: Path) -> Path:
+def _import_dataset(source: Path, imported_data_root: Path) -> Path:
     df = _validated_dataset(source)
-    IMPORTED_DATA_ROOT.mkdir(parents=True, exist_ok=True)
-    target = IMPORTED_DATA_ROOT / f"{safe_artifact_name(source.stem)}.csv"
+    imported_data_root.mkdir(parents=True, exist_ok=True)
+    target = imported_data_root / f"{safe_artifact_name(source.stem)}.csv"
     counter = 2
     while target.exists():
-        target = IMPORTED_DATA_ROOT / f"{safe_artifact_name(source.stem)}-{counter}.csv"
+        target = imported_data_root / f"{safe_artifact_name(source.stem)}-{counter}.csv"
         counter += 1
     shutil.copy2(source, target)
     return target

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
 import json
 from pathlib import Path
+import secrets
+import string
 from typing import Any
-from uuid import uuid4
 
 import pandas as pd
 
@@ -19,29 +19,39 @@ class ArtifactPaths:
     root: Path
     model_id: str
     model_dir: Path
-    forecasts_dir: Path
-    forecast_inputs_dir: Path
-    forecast_runs_dir: Path
+    training_input_path: Path
+    metadata_path: Path
 
 
-def build_run_id(now: datetime | None = None) -> str:
-    current = now or datetime.now(UTC)
-    return current.strftime("%Y-%m-%d_%H%M%S_%f")
+@dataclass(frozen=True)
+class ForecastArtifactPaths:
+    """Resolved filesystem paths for one forecast run."""
+
+    root: Path
+    model_id: str
+    run_id: str
+    run_dir: Path
+    forecast_input_path: Path
+    forecast_path: Path
+    metadata_path: Path
 
 
-def build_model_id(models_root: str | Path, model_id: str | None = None) -> str:
-    if model_id is not None:
-        safe_model_id = safe_artifact_name(model_id)
-        if (Path(models_root) / safe_model_id).exists():
-            raise FileExistsError(f"model id already exists: {safe_model_id}")
-        return safe_model_id
+ID_ALPHABET = string.ascii_letters + string.digits
 
-    root = Path(models_root)
-    for _ in range(5):
-        candidate = str(uuid4())
-        if not (root / candidate).exists():
-            return candidate
-    raise FileExistsError("could not generate a unique model id")
+
+def build_model_id(models_root: str | Path | None = None, model_id: str | None = None) -> str:
+    return _build_unique_id("mdl", models_root, model_id)
+
+
+def build_run_id(runs_root: str | Path | None = None, run_id: str | None = None) -> str:
+    return _build_unique_id("run", runs_root, run_id)
+
+
+def build_short_id(prefix: str, size: int = 8) -> str:
+    if not prefix:
+        raise ValueError("id prefix cannot be empty")
+    token = "".join(secrets.choice(ID_ALPHABET) for _ in range(size))
+    return f"{safe_artifact_name(prefix)}_{token}"
 
 
 def build_artifact_paths(
@@ -52,14 +62,37 @@ def build_artifact_paths(
     root = Path(app_root)
     models_root = root / "models"
     resolved_model_id = build_model_id(models_root, model_id)
+    model_dir = models_root / resolved_model_id
 
     return ArtifactPaths(
         root=root,
         model_id=resolved_model_id,
-        model_dir=models_root / resolved_model_id,
-        forecasts_dir=root / "data" / "forecasts",
-        forecast_inputs_dir=root / "data" / "forecast_inputs",
-        forecast_runs_dir=root / "data" / "forecast_runs",
+        model_dir=model_dir,
+        training_input_path=root / "data" / "imported" / f"{resolved_model_id}_training_input.csv",
+        metadata_path=model_dir / "metadata.json",
+    )
+
+
+def build_forecast_artifact_paths(
+    app_root: str | Path,
+    *,
+    model_id: str,
+    run_id: str | None = None,
+) -> ForecastArtifactPaths:
+    root = Path(app_root)
+    resolved_model_id = safe_artifact_name(model_id)
+    runs_root = root / "models" / resolved_model_id / "runs"
+    resolved_run_id = build_run_id(runs_root, run_id)
+    run_dir = runs_root / resolved_run_id
+
+    return ForecastArtifactPaths(
+        root=root,
+        model_id=resolved_model_id,
+        run_id=resolved_run_id,
+        run_dir=run_dir,
+        forecast_input_path=root / "data" / "imported" / f"{resolved_run_id}_forecast_input.csv",
+        forecast_path=run_dir / "forecast.csv",
+        metadata_path=run_dir / "metadata.json",
     )
 
 
@@ -88,7 +121,28 @@ def safe_artifact_name(value: str) -> str:
     if not isinstance(value, str):
         raise TypeError("artifact name must be a string")
 
-    safe = "".join(character if character.isalnum() or character in {"-", "_"} else "_" for character in value.strip())
+    safe = "".join(
+        character if character.isalnum() or character in {"-", "_"} else "_"
+        for character in value.strip()
+    )
     if not safe:
         raise ValueError("artifact name cannot be empty")
     return safe
+
+
+def _build_unique_id(
+    prefix: str,
+    root: str | Path | None,
+    explicit_id: str | None,
+) -> str:
+    if explicit_id is not None:
+        safe_id = safe_artifact_name(explicit_id)
+        if root is not None and (Path(root) / safe_id).exists():
+            raise FileExistsError(f"id already exists: {safe_id}")
+        return safe_id
+
+    for _ in range(10):
+        candidate = build_short_id(prefix)
+        if root is None or not (Path(root) / candidate).exists():
+            return candidate
+    raise FileExistsError(f"could not generate a unique {prefix} id")

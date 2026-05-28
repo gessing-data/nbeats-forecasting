@@ -2,54 +2,64 @@ import json
 import shutil
 from pathlib import Path
 
+from energy_forecast.app_paths import AppPaths, resolve_app_paths
 from energy_forecast.data.opsd_zones import load_opsd_zone_names
 
 
 ModelRecord = dict[str, object]
 
-APP_ROOT = Path(__file__).resolve().parents[3]
-MODELS_ROOT = APP_ROOT / "models"
 
-
-def list_pretrained_models() -> list[ModelRecord]:
-    if not MODELS_ROOT.exists():
+def list_pretrained_models(paths: AppPaths | None = None) -> list[ModelRecord]:
+    app_paths = paths or resolve_app_paths()
+    models_root = app_paths.models_dir
+    if not models_root.exists():
         return []
 
-    zone_names = load_opsd_zone_names()
+    zone_names = load_opsd_zone_names(app_paths)
     models = [
         model
-        for model_dir in sorted(MODELS_ROOT.iterdir())
+        for model_dir in sorted(models_root.iterdir())
         if model_dir.is_dir()
-        if (model := _load_model_record(model_dir, zone_names)) is not None
+        if (model := _load_model_record(model_dir, zone_names, models_root)) is not None
     ]
     return models
 
 
-def find_pretrained_model(model_id: str) -> ModelRecord | None:
+def find_pretrained_model(
+    model_id: str, paths: AppPaths | None = None
+) -> ModelRecord | None:
     return next(
-        (model for model in list_pretrained_models() if model["id"] == model_id), None
+        (model for model in list_pretrained_models(paths) if model["id"] == model_id),
+        None,
     )
 
 
-def delete_pretrained_model(model_id: str) -> None:
-    model = find_pretrained_model(model_id)
+def delete_pretrained_model(model_id: str, paths: AppPaths | None = None) -> None:
+    app_paths = paths or resolve_app_paths()
+    models_root = app_paths.models_dir
+    model = find_pretrained_model(model_id, app_paths)
     if model is None:
         raise FileNotFoundError(f"Modelo no encontrado: {model_id}")
-    model_dir = Path(str(model["model_dir"]))
-    if not model_dir.is_relative_to(MODELS_ROOT):
+
+    model_dir = Path(str(model["model_dir"])).resolve()
+    resolved_models_root = models_root.resolve()
+    if not model_dir.is_relative_to(resolved_models_root):
         raise ValueError("La ruta del modelo no pertenece al directorio de modelos.")
+
     shutil.rmtree(model_dir)
 
 
 def _load_model_record(
-    model_dir: Path, zone_names: dict[str, str]
+    model_dir: Path, zone_names: dict[str, str], models_root: Path
 ) -> ModelRecord | None:
+    relative_model_dir = model_dir.relative_to(models_root)
     config = _read_json(model_dir / "config.json")
     metadata = _read_json(model_dir / "metadata.json")
     if config is None or metadata is None:
         return None
 
-    dataset = str(metadata.get("dataset") or model_dir.parents[1].name)
+    model_id = str(metadata.get("model_id") or metadata.get("id") or model_dir.name)
+    dataset = str(metadata.get("dataset") or model_id)
     model_type = str(metadata.get("model") or "model")
     input_size = int(config.get("input_size", 0))
     horizon = int(config.get("horizon", 0))
@@ -59,8 +69,8 @@ def _load_model_record(
     title = str(metadata.get("title") or f"{model_type.upper()} {zone}")
 
     return {
-        "id": str(metadata.get("id") or model_dir.name),
-        "model_relative_dir": model_dir.name,
+        "id": model_id,
+        "model_relative_dir": relative_model_dir.as_posix(),
         "name": title,
         "title": title,
         "zone": zone,

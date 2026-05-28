@@ -1,16 +1,15 @@
-from pathlib import Path
-
 import pandas as pd
 
+from energy_forecast.app_paths import AppPaths, resolve_app_paths
 
-APP_ROOT = Path(__file__).resolve().parents[3]
-OPSD_ZONES_PATH = APP_ROOT / "data" / "reference" / "opsd_zones.csv"
 REQUIRED_COLUMNS = {"code", "name"}
 
 
-def load_opsd_zones() -> pd.DataFrame:
+def load_opsd_zones(paths: AppPaths | None = None) -> pd.DataFrame:
+    app_paths = paths or resolve_app_paths()
+    zones_path = app_paths.reference_data_dir / "opsd_zones.csv"
     try:
-        zones = pd.read_csv(OPSD_ZONES_PATH, dtype=str).fillna("")
+        zones = pd.read_csv(zones_path, dtype=str).fillna("")
     except (OSError, pd.errors.ParserError):
         return pd.DataFrame(columns=sorted(REQUIRED_COLUMNS))
 
@@ -20,8 +19,8 @@ def load_opsd_zones() -> pd.DataFrame:
     return zones
 
 
-def load_opsd_zone_names() -> dict[str, str]:
-    zones = load_opsd_zones()
+def load_opsd_zone_names(paths: AppPaths | None = None) -> dict[str, str]:
+    zones = load_opsd_zones(paths)
     if zones.empty:
         return {}
 

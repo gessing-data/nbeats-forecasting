@@ -1,9 +1,9 @@
 import asyncio
-from pathlib import Path
 
 import flet as ft
 import pandas as pd
 
+from energy_forecast.app_paths import prepare_workspace
 from energy_forecast.desktop.components.app_navigation import build_app_bar
 from energy_forecast.desktop.model_catalog import find_pretrained_model
 from energy_forecast.desktop.navigation import navigate_to
@@ -18,10 +18,11 @@ from energy_forecast.desktop.pages.settings_page import build_settings_page
 
 
 BACKGROUND_COLOR = "#F8FAFC"
-APP_ROOT = Path(__file__).resolve().parents[3]
 
 
 def main(page: ft.Page) -> None:
+    paths = prepare_workspace()
+
     page.title = "Energy Forecast App"
     page.bgcolor = BACKGROUND_COLOR
     page.padding = 0
@@ -89,7 +90,7 @@ def main(page: ft.Page) -> None:
     def build_model_selection_view() -> ft.View:
         return build_view(
             "/",
-            build_model_selection_page(page, selection_state),
+            build_model_selection_page(page, selection_state, paths),
             show_title=True,
             floating_action_button=build_create_model_button(page, disabled=bool(training_state["running"])),
         )
@@ -99,6 +100,7 @@ def main(page: ft.Page) -> None:
             "/models/new",
             build_model_creation_page(
                 page,
+                paths,
                 on_create=start_training,
             ),
         )
@@ -121,9 +123,9 @@ def main(page: ft.Page) -> None:
             source_file = request["source_file"]
             series = pd.read_csv(source_file)
             train_nbeats_model(
-                    app_root=APP_ROOT,
-                    title=str(request["title"]),
-                    dataset_name=str(request["dataset_name"]),
+                app_root=paths.workspace_root,
+                title=str(request["title"]),
+                dataset_name=str(request["dataset_name"]),
                 source_file=source_file,
                 series=series,
                 horizon=int(request["horizon"]),
@@ -159,7 +161,7 @@ def main(page: ft.Page) -> None:
         return build_view("/history", build_forecast_history_page(), show_title=True)
 
     def build_settings_view() -> ft.View:
-        return build_view("/settings", build_settings_page(), show_title=True)
+        return build_view("/settings", build_settings_page(page, paths), show_title=True)
 
     def build_model_workspace_view(route: str, model: dict[str, object]) -> ft.View:
         return build_view(route, build_forecast_workspace_page(model))
@@ -187,7 +189,7 @@ def main(page: ft.Page) -> None:
         if not route.match("/models/:model_id"):
             return False
         model_id = str(route.model_id)
-        model = find_pretrained_model(model_id)
+        model = find_pretrained_model(model_id, paths)
         if model is None:
             return False
         page.views.append(build_model_selection_view())
