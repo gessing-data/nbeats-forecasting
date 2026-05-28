@@ -10,11 +10,7 @@ from typing import Any, Literal
 import pandas as pd
 
 from energy_forecast.models import NBeatsModel
-from energy_forecast.storage import (
-    build_artifact_paths,
-    save_dataframe,
-    save_json,
-)
+from energy_forecast.storage import build_artifact_paths, save_dataframe, save_json
 
 SelectionMode = Literal["all", "first_n", "row_range", "date_range"]
 
@@ -76,6 +72,7 @@ def select_training_data(
 def train_nbeats_model(
     *,
     app_root: str | Path,
+    title: str,
     dataset_name: str,
     source_file: str | Path | None,
     series: pd.DataFrame,
@@ -86,12 +83,20 @@ def train_nbeats_model(
     model_kwargs: dict[str, Any] | None = None,
     selection_mode: SelectionMode = "all",
     selection_metadata: dict[str, Any] | None = None,
+    description: str | None = None,
     model_id: str | None = None,
     overwrite_model: bool = False,
 ) -> TrainingResult:
     """Train N-BEATS and persist the model plus exact training input."""
     model_kwargs = dict(model_kwargs or {})
     selection_metadata = dict(selection_metadata or {})
+    clean_description = (description or "").strip()
+    clean_title = title.strip()
+    if not clean_title:
+        raise ValueError("title is required")
+
+    paths = build_artifact_paths(app_root, model_id=model_id)
+    model_kwargs.setdefault("default_root_dir", str(paths.model_dir / "logs" / "training"))
     model = NBeatsModel(
         horizon=horizon,
         freq=freq,
@@ -106,10 +111,6 @@ def train_nbeats_model(
     )
     _validate_training_size(train_df, model.input_size, horizon)
 
-    paths = build_artifact_paths(
-        app_root,
-        model_id=model_id,
-    )
     _validate_artifact_outputs(
         paths.training_input_path,
         paths.model_dir,
@@ -122,20 +123,24 @@ def train_nbeats_model(
     save_dataframe(train_df, paths.training_input_path, overwrite=overwrite_model)
 
     metadata = {
+        "id": paths.model_id,
+        "title": clean_title,
         "dataset": dataset_name,
         "model": "nbeats",
         "model_id": paths.model_id,
         "trained_at": datetime.now(UTC).isoformat(),
         "source_file": str(source_file) if source_file is not None else None,
+        "source_file_name": Path(source_file).name if source_file is not None else None,
         "selection_mode": selection_mode,
         "selection_metadata": selection_metadata,
+        "description": clean_description,
+        "training_slice": _training_slice_metadata(series, train_df),
         "train_rows": len(train_df),
         "start_timestamp": train_df["timestamp"].iloc[0].isoformat(),
         "end_timestamp": train_df["timestamp"].iloc[-1].isoformat(),
         "training_input_path": str(paths.training_input_path),
-        "training_input_relative_path": str(
-            paths.training_input_path.relative_to(paths.root)
-        ),
+        "training_input_relative_path": str(paths.training_input_path.relative_to(paths.root)),
+        "logs_path": str(paths.model_dir / "logs" / "training"),
     }
     save_json(metadata, paths.metadata_path, overwrite=overwrite_model)
 
@@ -194,3 +199,29 @@ def _validate_training_size(series: pd.DataFrame, input_size: int, horizon: int)
         raise ValueError(
             f"training data must include at least input_size + horizon rows ({minimum_rows})"
         )
+
+
+def _training_slice_metadata(source: pd.DataFrame, selected: pd.DataFrame) -> dict[str, Any]:
+    prepared = NBeatsModel._prepare_series(source)
+    if selected.empty:
+        return {
+            "row_start": 0,
+            "row_end": 0,
+            "rows": 0,
+            "start_timestamp": None,
+            "end_timestamp": None,
+        }
+
+    start_timestamp = selected["timestamp"].iloc[0]
+    end_timestamp = selected["timestamp"].iloc[-1]
+    start_matches = prepared.index[prepared["timestamp"] == start_timestamp].tolist()
+    end_matches = prepared.index[prepared["timestamp"] == end_timestamp].tolist()
+    row_start = start_matches[0] if start_matches else 0
+    row_end = (end_matches[-1] + 1) if end_matches else row_start + len(selected)
+    return {
+        "row_start": int(row_start),
+        "row_end": int(row_end),
+        "rows": int(len(selected)),
+        "start_timestamp": start_timestamp.isoformat(),
+        "end_timestamp": end_timestamp.isoformat(),
+    }

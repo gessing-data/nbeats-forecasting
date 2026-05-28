@@ -5,7 +5,11 @@ from energy_forecast.desktop.model_catalog import ModelRecord
 from energy_forecast.desktop.navigation import navigate_to
 
 
-def build_model_list(page: ft.Page, models: list[ModelRecord]) -> list[ft.Control]:
+def build_model_list(
+    page: ft.Page,
+    models: list[ModelRecord],
+    on_delete: ft.EventHandler | None = None,
+) -> list[ft.Control]:
     if not models:
         return [_empty_state()]
 
@@ -22,6 +26,7 @@ def build_model_list(page: ft.Page, models: list[ModelRecord]) -> list[ft.Contro
             on_click=lambda _, model_id=model["id"]: navigate_to(
                 page, f"/models/{model_id}"
             ),
+            on_delete=lambda event, model=model: on_delete(event, model) if on_delete is not None else None,
         )
         for model in models
     ]

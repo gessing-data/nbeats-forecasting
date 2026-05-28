@@ -39,12 +39,12 @@ class ForecastArtifactPaths:
 ID_ALPHABET = string.ascii_letters + string.digits
 
 
-def build_model_id() -> str:
-    return build_short_id("mdl")
+def build_model_id(models_root: str | Path | None = None, model_id: str | None = None) -> str:
+    return _build_unique_id("mdl", models_root, model_id)
 
 
-def build_run_id() -> str:
-    return build_short_id("run")
+def build_run_id(runs_root: str | Path | None = None, run_id: str | None = None) -> str:
+    return _build_unique_id("run", runs_root, run_id)
 
 
 def build_short_id(prefix: str, size: int = 8) -> str:
@@ -60,8 +60,9 @@ def build_artifact_paths(
     model_id: str | None = None,
 ) -> ArtifactPaths:
     root = Path(app_root)
-    resolved_model_id = safe_artifact_name(model_id or build_model_id())
-    model_dir = root / "models" / resolved_model_id
+    models_root = root / "models"
+    resolved_model_id = build_model_id(models_root, model_id)
+    model_dir = models_root / resolved_model_id
 
     return ArtifactPaths(
         root=root,
@@ -80,8 +81,9 @@ def build_forecast_artifact_paths(
 ) -> ForecastArtifactPaths:
     root = Path(app_root)
     resolved_model_id = safe_artifact_name(model_id)
-    resolved_run_id = safe_artifact_name(run_id or build_run_id())
-    run_dir = root / "models" / resolved_model_id / "runs" / resolved_run_id
+    runs_root = root / "models" / resolved_model_id / "runs"
+    resolved_run_id = build_run_id(runs_root, run_id)
+    run_dir = runs_root / resolved_run_id
 
     return ForecastArtifactPaths(
         root=root,
@@ -119,7 +121,28 @@ def safe_artifact_name(value: str) -> str:
     if not isinstance(value, str):
         raise TypeError("artifact name must be a string")
 
-    safe = "".join(character if character.isalnum() or character in {"-", "_"} else "_" for character in value.strip())
+    safe = "".join(
+        character if character.isalnum() or character in {"-", "_"} else "_"
+        for character in value.strip()
+    )
     if not safe:
         raise ValueError("artifact name cannot be empty")
     return safe
+
+
+def _build_unique_id(
+    prefix: str,
+    root: str | Path | None,
+    explicit_id: str | None,
+) -> str:
+    if explicit_id is not None:
+        safe_id = safe_artifact_name(explicit_id)
+        if root is not None and (Path(root) / safe_id).exists():
+            raise FileExistsError(f"id already exists: {safe_id}")
+        return safe_id
+
+    for _ in range(10):
+        candidate = build_short_id(prefix)
+        if root is None or not (Path(root) / candidate).exists():
+            return candidate
+    raise FileExistsError(f"could not generate a unique {prefix} id")
