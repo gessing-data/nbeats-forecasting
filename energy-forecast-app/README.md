@@ -2,7 +2,9 @@
 
 Aplicacion de escritorio en Python para pronosticar demanda electrica univariada a partir de series horarias. El objetivo del subproyecto es construir una herramienta que permita seleccionar modelos N-BEATS preentrenados y generar pronosticos sobre demanda electrica.
 
-El proyecto principal de investigacion se mantiene fuera de este directorio. Este directorio contiene la aplicacion y el paquete Python que encapsulara la logica de datos, modelos, servicios, evaluacion e interfaz grafica. Los notebooks de exploracion y preparacion de datos viven en `../notebooks/` y usan un entorno Poetry separado.
+Este directorio contiene la aplicacion y el paquete Python que encapsula la logica de datos, modelos, servicios, almacenamiento e interfaz grafica.
+
+Los datos de trabajo ya no forman parte de la estructura de archivos del subproyecto. La aplicacion crea y usa un workspace externo visible para el usuario, por defecto en `~/Energy Forecast app/`.
 
 ## Objetivo
 
@@ -10,8 +12,8 @@ La aplicacion trabajara con demanda electrica real, no con precios, generacion s
 
 El flujo previsto es:
 
-1. Descargar o colocar el archivo crudo de Open Power System Data en `data/raw/`.
-2. Usar los notebooks de `../notebooks/` para transformar el archivo crudo en archivos limpios por pais dentro de `data/processed/`.
+1. Descargar o colocar el archivo crudo de Open Power System Data en `~/Energy Forecast app/data/raw/`.
+2. Usar los seeders futuros de la app para transformar el archivo crudo en archivos limpios por pais dentro del workspace externo.
 3. Iniciar la aplicacion de escritorio.
 4. Seleccionar un modelo N-BEATS preentrenado disponible.
 5. Trabajar con el modelo seleccionado en el espacio de forecast de la aplicacion.
@@ -25,10 +27,10 @@ La fuente de datos considerada inicialmente es Open Power System Data:
 https://data.open-power-system-data.org/time_series/2020-10-06/
 ```
 
-El archivo base esperado es:
+El archivo base esperado, cuando se prepare desde el workspace externo de la app, es:
 
 ```text
-data/raw/time_series_60min_singleindex.csv
+~/Energy Forecast app/data/raw/time_series_60min_singleindex.csv
 ```
 
 La columna temporal del archivo crudo es:
@@ -53,7 +55,7 @@ ES_load_actual_entsoe_transparency
 
 ## Datos Procesados
 
-La aplicacion no debe depender directamente del CSV crudo de OPSD. Los datos que consumira la interfaz deben estar limpios y normalizados en `data/processed/`.
+La aplicacion no debe depender directamente del CSV crudo de OPSD. Los datos que consumira la interfaz deben estar limpios y normalizados en el workspace externo, no dentro del repositorio.
 
 Formato recomendado por archivo:
 
@@ -66,12 +68,46 @@ timestamp,y
 Convencion recomendada de nombres:
 
 ```text
-data/processed/DE.csv
-data/processed/FR.csv
-data/processed/ES.csv
+~/Energy Forecast app/data/processed/DE.csv
+~/Energy Forecast app/data/processed/FR.csv
+~/Energy Forecast app/data/processed/ES.csv
 ```
 
-La aplicacion podra detectar estos archivos y ofrecer al usuario los paises disponibles. Si no hay datos procesados, o si el usuario desea trabajar con otra serie, la GUI podra permitir cargar un CSV externo con el mismo contrato: columnas `timestamp` y `y`.
+La aplicacion podra detectar estos archivos y ofrecer al usuario los paises disponibles. Si no hay datos procesados, o si el usuario desea trabajar con otra serie, la GUI permite importar un CSV externo con el mismo contrato: columnas `timestamp` y `y`. Los CSV importados se copian al workspace externo.
+
+## Workspace Externo
+
+La aplicacion separa codigo fuente y datos de trabajo. El repositorio no debe contener un directorio `energy-forecast-app/data/` como parte de su estructura.
+
+Workspace por defecto:
+
+```text
+~/Energy Forecast app/
+```
+
+Estructura administrada por la aplicacion:
+
+```text
+Energy Forecast app/
+├─ settings.json
+├─ data/
+│  ├─ raw/
+│  ├─ processed/
+│  ├─ imported/
+│  └─ reference/
+└─ models/
+```
+
+Responsabilidades del workspace:
+
+- `data/raw/`: archivos originales descargados desde OPSD u otra fuente.
+- `data/processed/`: series limpias generadas para uso normal de la app.
+- `data/imported/`: CSV externos importados desde la GUI.
+- `data/reference/`: datasets de referencia o seeds preparados por la aplicacion.
+- `models/`: artefactos de modelos entrenados, catalogos y runs asociados.
+- `settings.json`: estado del workspace y banderas de inicializacion.
+
+El codigo que resuelve estas rutas vive en `src/energy_forecast/app_paths.py`. La interfaz de configuracion muestra la ruta activa y permite abrir la carpeta del workspace.
 
 ## Stack Tecnologico
 
@@ -106,17 +142,6 @@ Responsabilidad de cada dependencia:
 - `torch`: backend de deep learning usado por `neuralforecast`.
 - `flet-charts`: componentes de graficacion integrados con Flet.
 - `plotly`: visualizaciones interactivas para la interfaz.
-
-Dependencias de notebooks y experimentacion:
-
-```text
-matplotlib
-pmdarima
-ipykernel
-notebook
-```
-
-Estas dependencias se administran desde `../notebooks/pyproject.toml`, no desde el entorno de la aplicacion.
 
 ## Instalacion
 
@@ -170,74 +195,59 @@ Por esa razon existe `src/main.py`: es una entrada tecnica para Flet CLI, hot-re
 
 ## Estructura Del Proyecto
 
-Estructura actual y prevista:
+Estructura actual y prevista. La interfaz Flet esta organizada por features: cada pantalla principal vive en `desktop/features/<feature>/` y puede tener sus propios componentes internos.
 
 ```text
 energy-forecast-app/
 ├─ README.md
 ├─ pyproject.toml
 ├─ poetry.lock
-├─ data/
-│  ├─ raw/
-│  │  └─ time_series_60min_singleindex.csv
-│  ├─ processed/
-│  │  ├─ DE.csv
-│  │  └─ FR.csv
-│  └─ forecasts/
 ├─ src/
 │  ├─ main.py
 │  └─ energy_forecast/
 │     ├─ __init__.py
+│     ├─ app_paths.py
 │     ├─ config/
 │     ├─ data/
+│     │  └─ opsd_zones.py
 │     ├─ models/
+│     │  ├─ base.py
+│     │  └─ nbeats_model.py
 │     ├─ services/
-│     ├─ evaluation/
+│     │  ├─ forecasting.py
+│     │  └─ training.py
+│     ├─ storage/
+│     │  ├─ artifacts.py
+│     │  └─ model_catalog.py
 │     └─ desktop/
 │        ├─ app.py
+│        ├─ layout.py
+│        ├─ navigation.py
+│        ├─ router.py
+│        ├─ training_controller.py
 │        ├─ components/
-│        │  ├─ app_navigation.py
-│        │  └─ model_card.py
-│        └─ pages/
-│           ├─ model_selection_page.py
-│           ├─ forecast_workspace_page.py
-│           ├─ forecast_history_page.py
-│           └─ settings_page.py
+│        │  └─ app_navigation.py
+│        └─ features/
+│           ├─ model_selection/
+│           │  ├─ page.py
+│           │  └─ components/
+│           │     ├─ model_card.py
+│           │     ├─ model_filters.py
+│           │     └─ model_list.py
+│           ├─ model_creation/
+│           │  └─ page.py
+│           ├─ forecast_workspace/
+│           │  └─ page.py
+│           ├─ forecast_history/
+│           │  └─ page.py
+│           └─ settings/
+│              └─ page.py
 └─ tests/
 ```
 
 Algunas carpetas todavia pueden no existir porque el proyecto esta en etapa inicial.
 
-Los notebooks se ubican fuera de la aplicacion:
-
-```text
-nbeats-forecasting/
-├─ notebooks/
-│  ├─ pyproject.toml
-│  ├─ 01_exploration.ipynb
-│  └─ 02_prepare_country_datasets.ipynb
-└─ energy-forecast-app/
-```
-
 ## Responsabilidades Por Carpeta
-
-`data/raw/`
-
-Contiene archivos originales descargados desde OPSD u otra fuente. No deben ser modificados manualmente.
-
-`data/processed/`
-
-Contendra series limpias por pais, listas para ser consumidas por la aplicacion. Cada archivo deberia tener columnas `timestamp` y `y`.
-
-`data/forecasts/`
-
-Contendra salidas generadas por la aplicacion, como pronosticos exportados.
-
-`../notebooks/`
-
-Contiene exploracion y preparacion de datos. Los notebooks pueden depender del archivo crudo, pero la aplicacion final debe consumir preferentemente datos procesados.
-
-Este directorio tiene su propio `pyproject.toml` con `package-mode = false`, porque no representa un paquete instalable. Sirve para preparar un entorno virtual separado para notebooks sin mezclar dependencias experimentales con la aplicacion.
 
 `src/main.py`
 
@@ -246,6 +256,10 @@ Entrada minima esperada por Flet cuando se usa `[tool.flet.app] path = "src"`. N
 `src/energy_forecast/`
 
 Paquete Python real de la aplicacion. Esta estructura permite importaciones internas consistentes, instalacion con Poetry, pruebas y empaquetado posterior como ejecutable.
+
+`src/energy_forecast/app_paths.py`
+
+Resolucion y preparacion del workspace externo de usuario. Centraliza rutas como `data/raw/`, `data/processed/`, `data/imported/`, `data/reference/`, `models/` y `settings.json` fuera del directorio del repositorio.
 
 `src/energy_forecast/data/`
 
@@ -257,11 +271,11 @@ Adaptadores propios alrededor de librerias externas. Aqui se encapsulara N-BEATS
 
 `src/energy_forecast/services/`
 
-Casos de uso de la aplicacion. La GUI debe llamar a estos servicios, no directamente a modelos ni notebooks.
+Casos de uso de la aplicacion. La GUI debe llamar a estos servicios, no directamente a modelos ni librerias externas.
 
-`src/energy_forecast/evaluation/`
+`src/energy_forecast/storage/`
 
-Directorio previsto para validaciones experimentales fuera del flujo principal inicial de la interfaz.
+Persistencia y catalogos propios de la aplicacion, por ejemplo artefactos de modelos entrenados, nombres seguros de artefactos y metadatos disponibles para la interfaz.
 
 `src/energy_forecast/desktop/`
 
@@ -271,17 +285,37 @@ Interfaz grafica con Flet. Esta capa debe encargarse de formularios, botones, ta
 
 Aplicacion Flet real. Debe configurar la ventana principal y montar la primera pagina, evitando acumular componentes grandes o logica de negocio.
 
-`src/energy_forecast/desktop/pages/`
+`src/energy_forecast/desktop/layout.py`
 
-Pantallas completas de la aplicacion. Una pagina representa una vista principal que el usuario puede abrir, por ejemplo inicio, configuracion de pronostico o resultados.
+Estructura visual compartida de la aplicacion. Debe contener composicion de layout comun, no reglas de negocio ni codigo especifico de un modelo.
+
+`src/energy_forecast/desktop/router.py`
+
+Enrutamiento entre vistas Flet. Debe decidir que pagina montar segun la ruta o accion de navegacion, manteniendo las paginas desacopladas entre si.
+
+`src/energy_forecast/desktop/navigation.py`
+
+Definicion de destinos de navegacion y utilidades relacionadas. Los controles visuales reutilizables de navegacion pertenecen a `desktop/components/`.
+
+`src/energy_forecast/desktop/features/`
+
+Modulos funcionales de la interfaz. Cada feature agrupa una pantalla principal y, si hace falta, sus componentes privados.
+
+`src/energy_forecast/desktop/features/<feature>/page.py`
+
+Pantalla principal de una feature. Debe componer controles visuales y delegar acciones relevantes a controladores o servicios.
+
+`src/energy_forecast/desktop/features/<feature>/components/`
+
+Piezas visuales usadas solo por esa feature, como tarjetas, filtros, listas o formularios internos. Si un componente empieza a usarse en varias features, puede moverse a `desktop/components/`.
 
 `src/energy_forecast/desktop/components/`
 
-Piezas visuales reutilizables dentro de una o varias paginas, como tarjetas, selectores, tablas o contenedores de graficas.
+Componentes visuales realmente compartidos por varias features, como la navegacion principal. No debe convertirse en un basurero de componentes especificos de una sola pantalla.
 
-`src/energy_forecast/desktop/controllers/`
+`src/energy_forecast/desktop/training_controller.py`
 
-Directorio previsto para controladores de eventos cuando la interfaz crezca. Estos controladores conectaran acciones de Flet con servicios de aplicacion, por ejemplo ejecutar un pronostico al presionar un boton.
+Controlador de eventos de entrenamiento usado por la interfaz. Debe conectar acciones de Flet con servicios de aplicacion sin implementar logica de entrenamiento dentro de la GUI.
 
 `tests/`
 
@@ -306,24 +340,44 @@ Dentro de la capa `desktop/`, la separacion recomendada es:
 
 ```text
 desktop/app.py
-  -> pages/model_selection_page.py
-  -> pages/forecast_workspace_page.py
-  -> pages/forecast_history_page.py
-  -> pages/settings_page.py
+  -> layout.py
+  -> router.py
+  -> navigation.py
   -> components/app_navigation.py
-  -> components/model_card.py
+  -> features/model_selection/page.py
+  -> features/model_selection/components/model_card.py
+  -> features/model_selection/components/model_filters.py
+  -> features/model_selection/components/model_list.py
+  -> features/model_creation/page.py
+  -> features/forecast_workspace/page.py
+  -> features/forecast_history/page.py
+  -> features/settings/page.py
 ```
 
-Cuando existan mas pantallas, la estructura puede crecer sin mezclar toda la interfaz en un solo archivo:
+Cuando existan mas pantallas, la estructura debe crecer agregando nuevas features o componentes locales, no mezclando toda la interfaz en un solo archivo:
 
 ```text
 desktop/
-  -> pages/
+  -> features/
+     -> nueva_feature/
+        -> page.py
+        -> components/
   -> components/
-  -> controllers/
+  -> router.py
+  -> layout.py
 ```
 
-Las paginas deben componer controles visuales. Los componentes deben ser piezas reutilizables. Los controladores deben coordinar eventos de la GUI con servicios como `ForecastingService`.
+Las paginas deben componer controles visuales. Los componentes dentro de una feature deben permanecer cerca de la pantalla que los usa. Los componentes compartidos solo deben vivir en `desktop/components/` cuando tengan uso real en mas de una feature. Los controladores deben coordinar eventos de la GUI con servicios como `ForecastingService` o servicios de entrenamiento.
+
+Indicaciones de organizacion para nuevas vistas y componentes:
+
+- Crear una carpeta nueva en `desktop/features/<nombre_feature>/` para cada pantalla o flujo principal.
+- Usar siempre `page.py` como entrada visual de la feature.
+- Colocar en `desktop/features/<nombre_feature>/components/` los componentes que solo usa esa feature.
+- Mantener `desktop/components/` para componentes compartidos entre varias features.
+- Mantener `router.py` como punto de decision de rutas y no importar paginas directamente desde componentes compartidos.
+- Mantener `layout.py` para composicion visual comun, no para estado de negocio.
+- Evitar que las paginas llamen directamente a modelos externos o librerias de entrenamiento; deben delegar en `services/` o controladores del paquete.
 
 ## Modelos
 
@@ -358,9 +412,10 @@ poetry run flet build windows
 
 ## Notas De Desarrollo
 
-- Mantener la preparacion de datos en notebooks o scripts separados de la GUI.
+- Mantener la preparacion de datos separada de la GUI.
 - Mantener la GUI libre de logica de modelos.
-- Usar `data/processed/` como fuente principal de la aplicacion.
+- No agregar `energy-forecast-app/data/` como parte de la estructura del repositorio.
+- Usar el workspace externo de la app como fuente principal de datasets y artefactos.
 - Aceptar CSV externos solo si cumplen el contrato `timestamp,y`.
 - Evitar mezclar demanda real con precios, generacion renovable o demanda pronosticada.
 - Preferir cambios pequenos y verificables antes de construir la interfaz completa.

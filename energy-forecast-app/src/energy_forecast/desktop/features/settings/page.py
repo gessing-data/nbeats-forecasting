@@ -5,6 +5,7 @@ import subprocess
 import flet as ft
 
 from energy_forecast.app_paths import AppPaths, load_settings
+from energy_forecast.desktop.layout import page_shell
 
 
 def build_settings_page(page: ft.Page, paths: AppPaths) -> ft.Control:
@@ -12,7 +13,7 @@ def build_settings_page(page: ft.Page, paths: AppPaths) -> ft.Control:
     seeds = settings.get("seeds", {})
     initialized = bool(seeds.get("initialized")) if isinstance(seeds, dict) else False
 
-    return _page_shell(
+    return page_shell(
         ft.Column(
             spacing=18,
             controls=[
@@ -21,19 +22,6 @@ def build_settings_page(page: ft.Page, paths: AppPaths) -> ft.Control:
                 _datasets_section(initialized),
             ],
         )
-    )
-
-
-def _page_shell(content: ft.Control) -> ft.Container:
-    return ft.Container(
-        expand=True,
-        bgcolor="#F8FAFC",
-        alignment=ft.Alignment(0, -1),
-        content=ft.Container(
-            width=968,
-            padding=ft.Padding(24, 28, 24, 28),
-            content=content,
-        ),
     )
 
 
@@ -108,10 +96,12 @@ def _datasets_section(initialized: bool) -> ft.Container:
 
 
 def _settings_card(content: ft.Control) -> ft.Container:
+    border_side = ft.BorderSide(1, "#E2E8F0")
+
     return ft.Container(
         padding=ft.Padding(18, 18, 18, 18),
         bgcolor="#FFFFFF",
-        border=ft.border.all(1, "#E2E8F0"),
+        border=ft.Border(border_side, border_side, border_side, border_side),
         border_radius=16,
         content=content,
     )

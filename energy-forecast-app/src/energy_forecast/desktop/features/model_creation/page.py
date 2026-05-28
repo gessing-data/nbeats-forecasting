@@ -11,15 +11,13 @@ import flet as ft
 import pandas as pd
 
 from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.layout import page_shell
 from energy_forecast.storage import safe_artifact_name
 
 
-BACKGROUND_COLOR = "#F8FAFC"
 BORDER_COLOR = "#E2E8F0"
 PRIMARY_TEXT = "#0F172A"
 SECONDARY_TEXT = "#64748B"
-MAX_CONTENT_WIDTH = 920
-PAGE_PADDING = 24
 
 
 @dataclass(frozen=True)
@@ -290,7 +288,7 @@ def build_model_creation_page(
     refresh_datasets()
     update_selection_fields()
 
-    return _page_shell(
+    return page_shell(
         ft.Column(
             spacing=18,
             controls=[
@@ -446,19 +444,6 @@ def _non_negative_int(value: str, label: str) -> int:
     if parsed < 0:
         raise ValueError(f"{label} debe ser mayor o igual a cero.")
     return parsed
-
-
-def _page_shell(content: ft.Control) -> ft.Container:
-    return ft.Container(
-        expand=True,
-        bgcolor=BACKGROUND_COLOR,
-        alignment=ft.Alignment(0, -1),
-        content=ft.Container(
-            width=MAX_CONTENT_WIDTH + (PAGE_PADDING * 2),
-            padding=ft.Padding(PAGE_PADDING, 28, PAGE_PADDING, 28),
-            content=content,
-        ),
-    )
 
 
 def _page_header() -> ft.Column:

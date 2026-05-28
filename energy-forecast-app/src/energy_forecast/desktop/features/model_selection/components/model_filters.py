@@ -1,6 +1,6 @@
 import flet as ft
 
-from energy_forecast.desktop.model_catalog import ModelRecord
+from energy_forecast.storage.model_catalog import ModelRecord
 
 
 SelectionState = dict[str, str]
