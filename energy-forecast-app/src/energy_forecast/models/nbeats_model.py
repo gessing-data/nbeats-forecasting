@@ -62,6 +62,7 @@ class NBeatsModel(ForecastModel):
             "h": self.horizon,
             "input_size": self.input_size,
             "max_steps": self.max_steps,
+            "enable_checkpointing": False,
         }
         nbeats_kwargs.update(self.model_kwargs)
 
