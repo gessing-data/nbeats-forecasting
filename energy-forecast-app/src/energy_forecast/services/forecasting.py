@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from energy_forecast.models import NBeatsModel
-from energy_forecast.storage import build_run_id, safe_artifact_name, save_dataframe, save_json
+from energy_forecast.storage import build_forecast_artifact_paths, save_dataframe, save_json
 
 
 @dataclass(frozen=True)
@@ -20,6 +20,7 @@ class ForecastRunResult:
     forecast_path: Path
     forecast_input_path: Path
     metadata_path: Path
+    model_id: str
     run_id: str
 
 
@@ -43,20 +44,20 @@ def generate_nbeats_forecast(
     forecast_input = prepared_context.tail(model.input_size).reset_index(drop=True)
     forecast = model.predict_from_context(forecast_input, model.horizon)
 
-    resolved_run_id = safe_artifact_name(run_id or build_run_id())
     root = Path(app_root)
-    basename = f"{safe_artifact_name(dataset_name)}_nbeats_h{model.horizon}_{resolved_run_id}"
-    forecast_input_path = root / "data" / "forecast_inputs" / f"{basename}_input.csv"
-    forecast_path = root / "data" / "forecasts" / f"{basename}.csv"
-    metadata_path = root / "data" / "forecast_runs" / f"{basename}.json"
+    model_id = Path(model_path).name
+    paths = build_forecast_artifact_paths(root, model_id=model_id, run_id=run_id)
 
-    save_dataframe(forecast_input, forecast_input_path, overwrite=overwrite)
-    save_dataframe(forecast, forecast_path, overwrite=overwrite)
+    save_dataframe(forecast_input, paths.forecast_input_path, overwrite=overwrite)
+    save_dataframe(forecast, paths.forecast_path, overwrite=overwrite)
     save_json(
         {
             "dataset": dataset_name,
             "model": "nbeats",
+            "model_id": paths.model_id,
+            "run_id": paths.run_id,
             "model_path": str(model_path),
+            "model_relative_path": _relative_to_root(Path(model_path), root),
             "horizon": model.horizon,
             "input_size": model.input_size,
             "generated_at": datetime.now(UTC).isoformat(),
@@ -64,17 +65,29 @@ def generate_nbeats_forecast(
             "forecast_rows": len(forecast),
             "last_input_timestamp": forecast_input["timestamp"].iloc[-1].isoformat(),
             "first_forecast_timestamp": forecast["timestamp"].iloc[0].isoformat(),
-            "forecast_input_path": str(forecast_input_path),
-            "forecast_path": str(forecast_path),
+            "forecast_input_path": str(paths.forecast_input_path),
+            "forecast_input_relative_path": _relative_to_root(
+                paths.forecast_input_path, root
+            ),
+            "forecast_path": str(paths.forecast_path),
+            "forecast_relative_path": _relative_to_root(paths.forecast_path, root),
         },
-        metadata_path,
+        paths.metadata_path,
         overwrite=overwrite,
     )
 
     return ForecastRunResult(
         forecast=forecast,
-        forecast_path=forecast_path,
-        forecast_input_path=forecast_input_path,
-        metadata_path=metadata_path,
-        run_id=resolved_run_id,
+        forecast_path=paths.forecast_path,
+        forecast_input_path=paths.forecast_input_path,
+        metadata_path=paths.metadata_path,
+        model_id=paths.model_id,
+        run_id=paths.run_id,
     )
+
+
+def _relative_to_root(path: Path, root: Path) -> str:
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)

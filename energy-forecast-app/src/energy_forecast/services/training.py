@@ -12,8 +12,6 @@ import pandas as pd
 from energy_forecast.models import NBeatsModel
 from energy_forecast.storage import (
     build_artifact_paths,
-    build_run_id,
-    safe_artifact_name,
     save_dataframe,
     save_json,
 )
@@ -28,7 +26,7 @@ class TrainingResult:
     model_path: Path
     training_input_path: Path
     metadata_path: Path
-    run_id: str
+    model_id: str
     model: NBeatsModel
 
 
@@ -88,7 +86,7 @@ def train_nbeats_model(
     model_kwargs: dict[str, Any] | None = None,
     selection_mode: SelectionMode = "all",
     selection_metadata: dict[str, Any] | None = None,
-    run_id: str | None = None,
+    model_id: str | None = None,
     overwrite_model: bool = False,
 ) -> TrainingResult:
     """Train N-BEATS and persist the model plus exact training input."""
@@ -108,19 +106,14 @@ def train_nbeats_model(
     )
     _validate_training_size(train_df, model.input_size, horizon)
 
-    resolved_run_id = safe_artifact_name(run_id or build_run_id())
     paths = build_artifact_paths(
         app_root,
-        dataset_name=dataset_name,
-        model_name="nbeats",
-        horizon=horizon,
-        run_id=resolved_run_id,
+        model_id=model_id,
     )
-    metadata_path = paths.model_dir / "metadata.json"
     _validate_artifact_outputs(
         paths.training_input_path,
         paths.model_dir,
-        metadata_path,
+        paths.metadata_path,
         overwrite=overwrite_model,
     )
 
@@ -131,6 +124,7 @@ def train_nbeats_model(
     metadata = {
         "dataset": dataset_name,
         "model": "nbeats",
+        "model_id": paths.model_id,
         "trained_at": datetime.now(UTC).isoformat(),
         "source_file": str(source_file) if source_file is not None else None,
         "selection_mode": selection_mode,
@@ -139,14 +133,17 @@ def train_nbeats_model(
         "start_timestamp": train_df["timestamp"].iloc[0].isoformat(),
         "end_timestamp": train_df["timestamp"].iloc[-1].isoformat(),
         "training_input_path": str(paths.training_input_path),
+        "training_input_relative_path": str(
+            paths.training_input_path.relative_to(paths.root)
+        ),
     }
-    save_json(metadata, metadata_path, overwrite=overwrite_model)
+    save_json(metadata, paths.metadata_path, overwrite=overwrite_model)
 
     return TrainingResult(
         model_path=paths.model_dir,
         training_input_path=paths.training_input_path,
-        metadata_path=metadata_path,
-        run_id=resolved_run_id,
+        metadata_path=paths.metadata_path,
+        model_id=paths.model_id,
         model=model,
     )
 

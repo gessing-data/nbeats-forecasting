@@ -10,16 +10,16 @@ ModelRecord = dict[str, object]
 
 def list_pretrained_models(paths: AppPaths | None = None) -> list[ModelRecord]:
     app_paths = paths or resolve_app_paths()
-    trained_models_root = app_paths.trained_models_dir
-    if not trained_models_root.exists():
+    models_root = app_paths.models_dir
+    if not models_root.exists():
         return []
 
     zone_names = load_opsd_zone_names(app_paths)
     models = [
         model
-        for model_dir in sorted(trained_models_root.glob("*/*/*/*"))
+        for model_dir in sorted(models_root.glob("*"))
         if model_dir.is_dir()
-        if (model := _load_model_record(model_dir, zone_names, trained_models_root)) is not None
+        if (model := _load_model_record(model_dir, zone_names, models_root)) is not None
     ]
     return models
 
@@ -34,16 +34,17 @@ def find_pretrained_model(
 
 
 def _load_model_record(
-    model_dir: Path, zone_names: dict[str, str], trained_models_root: Path
+    model_dir: Path, zone_names: dict[str, str], models_root: Path
 ) -> ModelRecord | None:
-    relative_model_dir = model_dir.relative_to(trained_models_root)
+    relative_model_dir = model_dir.relative_to(models_root)
     config = _read_json(model_dir / "config.json")
     metadata = _read_json(model_dir / "metadata.json")
     if config is None or metadata is None:
         return None
 
-    dataset = str(metadata.get("dataset") or relative_model_dir.parts[0])
-    model_type = str(metadata.get("model") or relative_model_dir.parts[1])
+    model_id = str(metadata.get("model_id") or model_dir.name)
+    dataset = str(metadata.get("dataset") or model_id)
+    model_type = str(metadata.get("model") or "model")
     input_size = int(config.get("input_size", 0))
     horizon = int(config.get("horizon", 0))
     max_steps = int(config.get("max_steps", 0))
@@ -51,7 +52,7 @@ def _load_model_record(
     zone = zone_names.get(dataset, dataset)
 
     return {
-        "id": "-".join(relative_model_dir.parts),
+        "id": model_id,
         "model_relative_dir": relative_model_dir.as_posix(),
         "name": f"{model_type.upper()} {zone}",
         "zone": zone,

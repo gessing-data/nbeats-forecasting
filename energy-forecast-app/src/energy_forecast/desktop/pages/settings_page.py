@@ -53,7 +53,7 @@ def _workspace_section(page: ft.Page, paths: AppPaths) -> ft.Container:
             controls=[
                 _section_header(
                     "Workspace",
-                    "La app lee y escribe datos, configuracion y modelos en esta carpeta externa.",
+                    "La app guarda datos de trabajo en data/ y modelos con sus runs en models/.",
                 ),
                 ft.TextField(
                     label="Ruta actual",

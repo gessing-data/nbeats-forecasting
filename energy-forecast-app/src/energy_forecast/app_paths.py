@@ -23,11 +23,7 @@ class AppPaths:
     processed_data_dir: Path
     imported_data_dir: Path
     reference_data_dir: Path
-    training_inputs_dir: Path
-    forecasts_dir: Path
-    forecast_inputs_dir: Path
-    forecast_runs_dir: Path
-    trained_models_dir: Path
+    models_dir: Path
 
 
 def default_workspace_root() -> Path:
@@ -48,11 +44,7 @@ def resolve_app_paths(workspace_root: str | Path | None = None) -> AppPaths:
         processed_data_dir=data_dir / "processed",
         imported_data_dir=data_dir / "imported",
         reference_data_dir=data_dir / "reference",
-        training_inputs_dir=data_dir / "training_inputs",
-        forecasts_dir=data_dir / "forecasts",
-        forecast_inputs_dir=data_dir / "forecast_inputs",
-        forecast_runs_dir=data_dir / "forecast_runs",
-        trained_models_dir=root / "models" / "trained",
+        models_dir=root / "models",
     )
 
 
@@ -63,11 +55,7 @@ def ensure_workspace_directories(paths: AppPaths) -> None:
         paths.processed_data_dir,
         paths.imported_data_dir,
         paths.reference_data_dir,
-        paths.training_inputs_dir,
-        paths.forecasts_dir,
-        paths.forecast_inputs_dir,
-        paths.forecast_runs_dir,
-        paths.trained_models_dir,
+        paths.models_dir,
     ):
         directory.mkdir(parents=True, exist_ok=True)
 
