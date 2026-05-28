@@ -3,6 +3,7 @@
 from .artifacts import (
     ArtifactPaths,
     build_artifact_paths,
+    build_model_id,
     build_run_id,
     safe_artifact_name,
     save_dataframe,
@@ -12,6 +13,7 @@ from .artifacts import (
 __all__ = [
     "ArtifactPaths",
     "build_artifact_paths",
+    "build_model_id",
     "build_run_id",
     "safe_artifact_name",
     "save_dataframe",
