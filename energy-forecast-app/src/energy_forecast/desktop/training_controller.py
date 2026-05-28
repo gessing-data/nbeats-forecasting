@@ -1,6 +1,5 @@
 import asyncio
 from pathlib import Path
-from typing import Any
 
 import flet as ft
 import pandas as pd
