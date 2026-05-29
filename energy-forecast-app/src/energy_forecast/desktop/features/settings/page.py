@@ -1,3 +1,4 @@
+import asyncio
 import os
 import platform
 import subprocess
@@ -6,9 +7,10 @@ import flet as ft
 
 from energy_forecast.app_paths import AppPaths, load_settings
 from energy_forecast.desktop.layout import page_shell
+from energy_forecast.desktop.seeding_controller import SeedingController
 
 
-def build_settings_page(page: ft.Page, paths: AppPaths) -> ft.Control:
+def build_settings_page(page: ft.Page, paths: AppPaths, seeding: SeedingController) -> ft.Control:
     settings = load_settings(paths)
     seeds = settings.get("seeds", {})
     initialized = bool(seeds.get("initialized")) if isinstance(seeds, dict) else False
@@ -19,7 +21,7 @@ def build_settings_page(page: ft.Page, paths: AppPaths) -> ft.Control:
             controls=[
                 _page_title("Configuracion de la app"),
                 _workspace_section(page, paths),
-                _datasets_section(initialized),
+                _datasets_section(page, seeding, initialized),
             ],
         )
     )
@@ -64,9 +66,77 @@ def _workspace_section(page: ft.Page, paths: AppPaths) -> ft.Container:
     )
 
 
-def _datasets_section(initialized: bool) -> ft.Container:
+def _datasets_section(page: ft.Page, seeding: SeedingController, initialized: bool) -> ft.Container:
     status_text = "Preparados" if initialized else "Pendientes"
     status_color = "#047857" if initialized else "#B45309"
+    phase = ft.Text(seeding.progress_text(), size=13, color="#64748B")
+    progress = ft.ProgressRing(width=22, height=22, stroke_width=3, visible=seeding.running)
+    buttons: list[ft.Control] = []
+
+    def run_action(action: str) -> None:
+        seeding.start(action)
+
+    def confirm_reinstall(_: ft.ControlEvent) -> None:
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Reinstalar workspace"),
+            content=ft.Text(
+                "Esta accion elimina data/ y models/. Conserva settings.json, pero no repara modelos entrenados."
+            ),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _event: dismiss_dialog(dialog)),
+                ft.FilledButton(
+                    "Reinstalar",
+                    on_click=lambda _event: confirm_reinstall_action(dialog),
+                ),
+            ],
+        )
+        if dialog not in page.overlay:
+            page.overlay.append(dialog)
+        dialog.open = True
+        page.update()
+
+    def close_dialog(dialog: ft.AlertDialog) -> None:
+        dialog.open = False
+
+    def dismiss_dialog(dialog: ft.AlertDialog) -> None:
+        close_dialog(dialog)
+        page.update()
+        if dialog in page.overlay:
+            page.overlay.remove(dialog)
+            page.update()
+
+    def confirm_reinstall_action(dialog: ft.AlertDialog) -> None:
+        close_dialog(dialog)
+        page.update()
+
+        async def start_after_dialog_closes() -> None:
+            await asyncio.sleep(0.1)
+            if dialog in page.overlay:
+                page.overlay.remove(dialog)
+                page.update()
+            run_action("reinstall")
+
+        page.run_task(start_after_dialog_closes)
+
+    install_button = ft.FilledButton(
+        "Instalar datasets",
+        icon=ft.Icons.DOWNLOAD,
+        on_click=lambda _: run_action("install"),
+    )
+    repair_button = ft.OutlinedButton(
+        "Reparar datasets",
+        icon=ft.Icons.BUILD,
+        on_click=lambda _: run_action("repair"),
+    )
+    reinstall_button = ft.OutlinedButton(
+        "Reinstalar workspace",
+        icon=ft.Icons.DELETE_SWEEP,
+        on_click=confirm_reinstall,
+    )
+    buttons.extend([install_button, repair_button, reinstall_button])
+    for button in buttons:
+        button.disabled = seeding.running
 
     return _settings_card(
         ft.Column(
@@ -74,7 +144,7 @@ def _datasets_section(initialized: bool) -> ft.Container:
             controls=[
                 _section_header(
                     "Datasets base",
-                    "Los seeders OPSD se agregaran despues. Por ahora no se descarga ni procesa nada automaticamente.",
+                    "Instala o repara datasets OPSD. Reparar datasets no modifica ni repara modelos entrenados.",
                 ),
                 ft.Row(
                     spacing=8,
@@ -85,10 +155,12 @@ def _datasets_section(initialized: bool) -> ft.Container:
                 ),
                 ft.Row(
                     spacing=12,
-                    controls=[
-                        ft.FilledButton("Preparar datasets base", disabled=True),
-                        ft.OutlinedButton("Reiniciar datasets base", disabled=True),
-                    ],
+                    wrap=True,
+                    controls=buttons,
+                ),
+                ft.Row(
+                    spacing=10,
+                    controls=[progress, phase],
                 ),
             ],
         )

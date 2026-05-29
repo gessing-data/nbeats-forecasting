@@ -5,13 +5,20 @@ import flet as ft
 import pandas as pd
 
 from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.background_operations import BackgroundOperations
 from energy_forecast.desktop.navigation import navigate_to
 
 
 class TrainingController:
-    def __init__(self, page: ft.Page, paths: AppPaths) -> None:
+    def __init__(
+        self,
+        page: ft.Page,
+        paths: AppPaths,
+        background: BackgroundOperations | None = None,
+    ) -> None:
         self.page = page
         self.paths = paths
+        self.background = background
         self.state: dict[str, bool | str] = {
             "running": False,
             "success": "",
@@ -27,6 +34,15 @@ class TrainingController:
 
     def sync_indicator(self) -> None:
         self.indicator.visible = self.running
+        if self.background is not None:
+            if self.running:
+                self.background.show(
+                    "Entrenamiento de modelo",
+                    "Creando modelo N-BEATS.",
+                    key="training",
+                )
+            else:
+                self.background.hide(key="training")
 
     def pop_pending_message(self) -> str:
         message = self.pending_snackbar["message"]
@@ -53,10 +69,16 @@ class TrainingController:
                 self.state["error"] = f"No se pudo crear el modelo: {exc}"
             finally:
                 self.state["running"] = False
-                self.sync_indicator()
-                self.pending_snackbar["message"] = str(
-                    self.state["error"] or self.state["success"]
-                )
+                message = str(self.state["error"] or self.state["success"])
+                if self.background is not None:
+                    self.background.finish(
+                        "Entrenamiento de modelo",
+                        message,
+                        success=not bool(self.state["error"]),
+                        key="training",
+                    )
+                self.indicator.visible = False
+                self.pending_snackbar["message"] = message
                 self._show_model_selection()
 
         self.page.run_task(run_training_task)
