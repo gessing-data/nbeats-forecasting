@@ -32,5 +32,8 @@ packages = [
     { include = "energy_forecast", from = "src" }
 ]
 
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0,<9.0.0"
+
 [tool.flet.app]
 path = "src"

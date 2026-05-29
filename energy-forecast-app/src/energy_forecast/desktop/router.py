@@ -12,6 +12,7 @@ from energy_forecast.desktop.features.model_selection.page import (
 from energy_forecast.desktop.features.settings.page import build_settings_page
 from energy_forecast.desktop.layout import BACKGROUND_COLOR
 from energy_forecast.desktop.navigation import navigate_to
+from energy_forecast.desktop.seeding_controller import SeedingController
 from energy_forecast.desktop.training_controller import TrainingController
 from energy_forecast.storage.model_catalog import find_pretrained_model
 
@@ -22,10 +23,12 @@ class DesktopRouter:
         page: ft.Page,
         paths: AppPaths,
         training: TrainingController,
+        seeding: SeedingController,
     ) -> None:
         self.page = page
         self.paths = paths
         self.training = training
+        self.seeding = seeding
         self.selection_state: dict[str, str] = {
             "query": "",
             "zone": "",
@@ -148,6 +151,10 @@ class DesktopRouter:
         if self.page.route != "/settings":
             return False
         self.page.views.append(
-            self._build_view("/settings", build_settings_page(self.page, self.paths), show_title=True)
+            self._build_view(
+                "/settings",
+                build_settings_page(self.page, self.paths, self.seeding),
+                show_title=True,
+            )
         )
         return True
