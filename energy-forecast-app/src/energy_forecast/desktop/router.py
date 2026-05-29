@@ -143,7 +143,11 @@ class DesktopRouter:
         if self.page.route != "/history":
             return False
         self.page.views.append(
-            self._build_view("/history", build_forecast_history_page(), show_title=True)
+            self._build_view(
+                "/history",
+                build_forecast_history_page(self.page, self.paths),
+                show_title=True,
+            )
         )
         return True
 
