@@ -10,7 +10,7 @@ from typing import Any, Literal
 import pandas as pd
 
 from energy_forecast.models import NBeatsModel
-from energy_forecast.storage import build_artifact_paths, save_dataframe, save_json
+from energy_forecast.storage import build_artifact_paths, save_json
 
 SelectionMode = Literal["all", "first_n", "row_range", "date_range"]
 
@@ -112,7 +112,6 @@ def train_nbeats_model(
     _validate_training_size(train_df, model.input_size, horizon)
 
     _validate_artifact_outputs(
-        paths.training_input_path,
         paths.model_dir,
         paths.metadata_path,
         overwrite=overwrite_model,
@@ -120,7 +119,6 @@ def train_nbeats_model(
 
     model.fit(train_df)
     model.save(paths.model_dir, overwrite=overwrite_model)
-    save_dataframe(train_df, paths.training_input_path, overwrite=overwrite_model)
 
     metadata = {
         "id": paths.model_id,
@@ -138,8 +136,6 @@ def train_nbeats_model(
         "train_rows": len(train_df),
         "start_timestamp": train_df["timestamp"].iloc[0].isoformat(),
         "end_timestamp": train_df["timestamp"].iloc[-1].isoformat(),
-        "training_input_path": str(paths.training_input_path),
-        "training_input_relative_path": str(paths.training_input_path.relative_to(paths.root)),
         "logs_path": str(paths.model_dir / "logs" / "training"),
     }
     save_json(metadata, paths.metadata_path, overwrite=overwrite_model)
@@ -174,7 +170,6 @@ def _selection_kwargs(
 
 
 def _validate_artifact_outputs(
-    training_input_path: Path,
     model_path: Path,
     metadata_path: Path,
     *,
@@ -185,7 +180,7 @@ def _validate_artifact_outputs(
 
     existing_paths = [
         path
-        for path in (training_input_path, model_path, metadata_path)
+        for path in (model_path, metadata_path)
         if path.exists()
     ]
     if existing_paths:
