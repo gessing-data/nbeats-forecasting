@@ -1,9 +1,44 @@
 \section{Método}
 
-Explique en esta sección el diseño metodológico, las fuentes de datos, la preparación, los criterios de evaluación y el procedimiento de experimentación. Si necesita mostrar código, use el entorno `codeblock` definido en `config/code.tex`.
+\subsection{Diseño metodológico y solución propuesta}
 
-\begin{codeblock}[language=Python]{Ejemplo de bloque de codigo}
-    def forecast(series):
-    """Ejemplo simple para documentar un flujo de trabajo."""
-    return model.predict(series)
-\end{codeblock}
+La metodología del presente trabajo se plantea desde una investigación aplicada de enfoque cuantitativo, orientada al pronóstico univariado de demanda eléctrica y a la construcción de una aplicación de escritorio que permita ejecutar dicho procedimiento de forma reproducible. Su carácter aplicado se debe a que el proyecto no se limita a estudiar el desempeño de un modelo de forma aislada, sino que integra el proceso de carga, validación, entrenamiento, almacenamiento y generación de pronósticos dentro de una solución tecnológica funcional.
+
+El diseño es no experimental, ya que la demanda eléctrica se analiza a partir de registros históricos observados, sin manipular directamente las condiciones que originan el consumo. La variable de interés corresponde a la carga eléctrica registrada en el tiempo, por lo que cada observación conserva una dependencia directa con su posición cronológica. Esta condición hace necesario respetar el orden temporal durante la preparación de los datos, el entrenamiento del modelo y la evaluación posterior del pronóstico.
+
+La solución propuesta consiste en una aplicación de escritorio para trabajar con series temporales de demanda eléctrica bajo un contrato de datos uniforme. En este flujo, la serie se representa mediante una columna temporal y una columna de valores observados, identificadas en la aplicación como \texttt{timestamp} y \texttt{y}. Esta estructura permite que los datos preparados a partir de Open Power System Data o importados desde archivos externos puedan procesarse bajo las mismas reglas de validación y modelado.
+
+Desde una perspectiva general, el sistema organiza el proceso completo desde la disponibilidad de una serie histórica hasta la obtención de un pronóstico. Primero, la aplicación permite seleccionar o importar una serie válida; después, verifica su estructura básica, su continuidad temporal y la consistencia de los valores observados. Posteriormente, el usuario puede definir el tramo de datos que será empleado para el entrenamiento y configurar los parámetros principales del modelo N-BEATS, como la frecuencia temporal, el horizonte de predicción y la ventana histórica de entrada.
+
+La solución también considera la persistencia de los artefactos generados durante el proceso. Cada entrenamiento produce un modelo guardado junto con su configuración, metadatos y el conjunto exacto de datos utilizado. De forma posterior, ese modelo puede cargarse para generar pronósticos a partir de un contexto histórico reciente. Con ello, la metodología articula dos dimensiones complementarias: la evaluación empírica del modelo de pronóstico y la implementación de una herramienta que permite operar el flujo de manera reproducible.
+
+\subsection{Datos utilizados y preparación de la serie}
+
+Los datos base del proyecto provienen del paquete \emph{Time series} de Open Power System Data, una fuente pública que recopila y estandariza series temporales del sector eléctrico europeo. En particular, se utiliza el archivo \texttt{time\_series\_60min\_singleindex.csv}, que contiene registros horarios asociados con demanda, generación, precios y otras variables del sistema eléctrico. Para el alcance de este trabajo se consideran únicamente las columnas de demanda eléctrica real, identificadas por el sufijo \texttt{\_load\_actual\_entsoe\_transparency}. Por tanto, se excluyen variables de pronóstico, precios, generación solar, generación eólica, intercambios y cualquier otra columna que no represente carga real observada.
+
+La columna temporal del archivo original corresponde a \texttt{utc\_timestamp}. Cada columna de demanda real se interpreta como una zona candidata, país o área del sistema eléctrico, y se transforma de manera independiente en una serie temporal univariada. Esta decisión mantiene la coherencia con el enfoque del proyecto, ya que el modelo se entrena únicamente con la trayectoria histórica de la variable objetivo y no incorpora variables exógenas como temperatura, humedad, calendario, generación renovable o indicadores económicos. En consecuencia, no se construye una serie multivariada ni se utiliza la demanda de una zona como variable explicativa de otra.
+
+La preparación de cada serie consiste en transformar los datos al contrato operativo requerido por la aplicación. Para ello, \texttt{utc\_timestamp} se convierte en una columna denominada \texttt{timestamp}, mientras que la columna de demanda seleccionada se renombra como \texttt{y}. Este formato permite que distintas zonas de Open Power System Data puedan procesarse bajo las mismas reglas de validación, entrenamiento y pronóstico. El mismo contrato se aplica a los datos externos ingresados por el usuario: la aplicación puede trabajar con archivos propios siempre que incluyan una columna temporal \texttt{timestamp} y una columna numérica \texttt{y}.
+
+La Tabla~\ref{tab:contrato-datos} muestra un ejemplo simplificado del formato final que recibe la aplicación después de seleccionar una zona y transformar sus columnas al contrato común.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Ejemplo del contrato de datos utilizado por la aplicación}
+    \label{tab:contrato-datos}
+    \begin{tabular}{ll}
+        \toprule
+        \texttt{timestamp} & \texttt{y} \\
+        \midrule
+        2015-01-01 00:00:00+00:00 & 5946.0 \\
+        2015-01-01 01:00:00+00:00 & 5726.0 \\
+        2015-01-01 02:00:00+00:00 & 5347.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Antes de utilizar una zona como entrada del modelo, se aplican validaciones orientadas a garantizar su consistencia temporal y numérica. En primer lugar, las marcas temporales se convierten a fechas interpretables y los valores de demanda se convierten a formato numérico. Posteriormente, las observaciones se ordenan cronológicamente, se revisan duplicados temporales, valores faltantes y discontinuidades en la frecuencia. Una zona se considera utilizable cuando dispone de un tramo continuo suficientemente amplio para cubrir la ventana histórica de entrada, el horizonte de predicción y el procedimiento de evaluación definido para el experimento.
+
+Como apoyo reproducible para esta preparación, el proyecto contempla notebooks de exploración y procesamiento. El notebook \texttt{01\_exploration.ipynb} permite inspeccionar el archivo crudo, identificar columnas de demanda real, revisar cobertura temporal, nulos y duplicados. El notebook \texttt{02\_prepare\_country\_datasets.ipynb} transforma zonas seleccionadas al contrato \texttt{timestamp}/\texttt{y} y exporta archivos procesados. Además, \texttt{04\_build\_opsd\_zone\_catalog.ipynb} construye un catálogo de zonas disponibles a partir de la metadata de Open Power System Data. Estos notebooks no sustituyen el flujo de la aplicación, sino que documentan y respaldan la preparación de los datos utilizados.
+
+Para las pruebas y la comparación de resultados se seleccionan Austria (\texttt{AT}) y Bélgica (\texttt{BE}) como casos de estudio específicos. Sus columnas originales son \texttt{AT\_load\_actual\_entsoe\_transparency} y \texttt{BE\_load\_actual\_entsoe\_transparency}. En los archivos procesados disponibles, \texttt{AT.csv} y \texttt{BE.csv}, cada zona contiene 50,400 observaciones horarias entre el 1 de enero de 2015 a las 00:00 UTC y el 30 de septiembre de 2020 a las 23:00 UTC. La revisión de estos archivos no identifica marcas temporales duplicadas, valores faltantes en \texttt{y} ni huecos en la frecuencia horaria, por lo que ambos casos quedan listos para aplicar el mismo protocolo de entrenamiento y evaluación.
