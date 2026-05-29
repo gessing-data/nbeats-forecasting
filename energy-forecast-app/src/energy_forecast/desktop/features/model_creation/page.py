@@ -18,6 +18,10 @@ from energy_forecast.storage import safe_artifact_name
 BORDER_COLOR = "#E2E8F0"
 PRIMARY_TEXT = "#0F172A"
 SECONDARY_TEXT = "#64748B"
+DATASET_LIST_HEIGHT = 360
+DATASET_PAGE_SIZE = 6
+DATASET_SCROLL_LOAD_THRESHOLD = 80
+DATASET_ORIGINS = ("Aplicacion", "Importado")
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,7 @@ class DatasetInfo:
     date_range: str
     valid: bool
     error: str = ""
+    loaded: bool = False
 
 
 def build_model_creation_page(
@@ -47,8 +52,21 @@ def build_model_creation_page(
         "hours_by_date": {},
         "range_start": None,
         "range_end": None,
+        "visible_dataset_counts": {
+            origin: DATASET_PAGE_SIZE for origin in DATASET_ORIGINS
+        },
+        "show_dataset_list": True,
+        "active_dataset_origin": "Aplicacion",
     }
-    dataset_list = ft.Column(spacing=10)
+    dataset_list = ft.Column(
+        spacing=10,
+        height=DATASET_LIST_HEIGHT,
+        scroll=ft.ScrollMode.AUTO,
+    )
+    dataset_count = ft.Text(size=13, color=SECONDARY_TEXT)
+    load_more_button = ft.TextButton("Cargar mas datasets")
+    dataset_tabs = ft.Container()
+    dataset_section_content = ft.Container()
     preview = ft.Container()
     selection_fields = ft.Container()
     error = _error_message()
@@ -101,33 +119,105 @@ def build_model_creation_page(
 
     def refresh_datasets() -> None:
         state["datasets"] = _load_datasets(processed_data_root, imported_data_root)
+        state["visible_dataset_counts"] = {
+            origin: DATASET_PAGE_SIZE for origin in DATASET_ORIGINS
+        }
         selected = state.get("selected")
         if selected and not any(
             item.path == selected.path for item in state["datasets"]
         ):
             state["selected"] = None
-        render_datasets()
+            state["show_dataset_list"] = True
+        _ensure_active_dataset_origin(state)
+        render_dataset_section()
         render_preview()
 
     def select_dataset(dataset: DatasetInfo) -> None:
         state["selected"] = dataset
+        state["show_dataset_list"] = False
         _prepare_temporal_state(state, dataset)
         _configure_date_range_picker(date_range_picker, state)
         update_selection_fields()
         error.visible = False
-        render_datasets()
+        render_dataset_section()
         render_preview()
         page.update()
 
-    def render_datasets() -> None:
-        processed = [item for item in state["datasets"] if item.origin == "Aplicacion"]
-        imported = [item for item in state["datasets"] if item.origin == "Importado"]
+    def render_dataset_list() -> None:
+        _ensure_active_dataset_origin(state)
+        active_origin = state["active_dataset_origin"]
+        active_datasets = [
+            item for item in state["datasets"] if item.origin == active_origin
+        ]
+        _ensure_selected_dataset_visible(state)
+        visible_counts = state["visible_dataset_counts"]
+        visible_datasets = _hydrate_dataset_batch(
+            state, active_datasets[: visible_counts[active_origin]]
+        )
+        visible_total = len(visible_datasets)
+        total = len(active_datasets)
+        dataset_count.value = _dataset_count_label(visible_total, total)
+        load_more_button.visible = visible_total < total
+        dataset_tabs.content = _dataset_origin_tabs(
+            state, on_change=change_dataset_origin
+        )
         dataset_list.controls = [
             _dataset_group(
-                "Datasets de la aplicacion", processed, select_dataset, state
+                _dataset_group_title(active_origin),
+                visible_datasets,
+                select_dataset,
+                state,
             ),
-            _dataset_group("Datasets importados", imported, select_dataset, state),
         ]
+
+    def render_dataset_section() -> None:
+        selected = state.get("selected")
+        if selected is not None and not state["show_dataset_list"]:
+            selected = _hydrate_dataset(state, selected)
+            state["selected"] = selected
+            dataset_section_content.content = _selected_dataset_summary(
+                selected, show_dataset_list
+            )
+            return
+
+        render_dataset_list()
+        dataset_section_content.content = _dataset_list_content(
+            dataset_tabs, dataset_count, dataset_list, load_more_button
+        )
+
+    def load_more_datasets() -> bool:
+        visible_counts = state["visible_dataset_counts"]
+        active_origin = state["active_dataset_origin"]
+        total = sum(1 for item in state["datasets"] if item.origin == active_origin)
+        current = visible_counts[active_origin]
+        if current >= total:
+            return False
+        visible_counts[active_origin] = min(total, current + DATASET_PAGE_SIZE)
+        render_dataset_section()
+        return True
+
+    def on_dataset_scroll(event: Any) -> None:
+        max_scroll = getattr(event, "max_scroll_extent", 0) or 0
+        pixels = getattr(event, "pixels", 0) or 0
+        if pixels >= max_scroll - DATASET_SCROLL_LOAD_THRESHOLD and load_more_datasets():
+            page.update()
+
+    def on_load_more_datasets(_: ft.ControlEvent) -> None:
+        if load_more_datasets():
+            page.update()
+
+    def show_dataset_list(_: ft.ControlEvent) -> None:
+        state["show_dataset_list"] = True
+        selected = state.get("selected")
+        if selected is not None:
+            state["active_dataset_origin"] = selected.origin
+        render_dataset_section()
+        page.update()
+
+    def change_dataset_origin(origin: str) -> None:
+        state["active_dataset_origin"] = origin
+        render_dataset_section()
+        page.update()
 
     def render_preview() -> None:
         dataset = state.get("selected")
@@ -209,6 +299,8 @@ def build_model_creation_page(
     date_range_picker.on_change = on_date_range_change
     start_hour.on_select = on_hour_change
     end_hour.on_select = on_hour_change
+    dataset_list.on_scroll = on_dataset_scroll
+    load_more_button.on_click = on_load_more_datasets
 
     def import_file(source: Path) -> None:
         try:
@@ -222,10 +314,13 @@ def build_model_creation_page(
             (item for item in state["datasets"] if item.path == imported_path), None
         )
         if state["selected"] is not None:
+            state["selected"] = _hydrate_dataset(state, state["selected"])
+            state["show_dataset_list"] = False
+            state["active_dataset_origin"] = "Importado"
             _prepare_temporal_state(state, state["selected"])
             _configure_date_range_picker(date_range_picker, state)
             update_selection_fields()
-        render_datasets()
+        render_dataset_section()
         render_preview()
         error.visible = False
         page.update()
@@ -295,7 +390,7 @@ def build_model_creation_page(
                 _page_header(),
                 _metadata_section(title, description),
                 _training_config_section(freq, horizon, input_size, max_steps),
-                _dataset_section(dataset_list, open_import),
+                _dataset_section(dataset_section_content, open_import),
                 preview,
                 _selection_mode_section(
                     selection_mode,
@@ -317,9 +412,13 @@ def _load_datasets(processed_data_root: Path, imported_data_root: Path) -> list[
         if not root.exists():
             continue
         datasets.extend(
-            _dataset_info(path, origin) for path in sorted(root.glob("*.csv"))
+            _dataset_placeholder(path, origin) for path in sorted(root.glob("*.csv"))
         )
     return datasets
+
+
+def _dataset_placeholder(path: Path, origin: str) -> DatasetInfo:
+    return DatasetInfo(path.stem, path, origin, 0, "Metadata pendiente", True)
 
 
 def _dataset_info(path: Path, origin: str) -> DatasetInfo:
@@ -330,9 +429,13 @@ def _dataset_info(path: Path, origin: str) -> DatasetInfo:
         date_range = (
             f"{start} - {end}" if pd.notna(start) and pd.notna(end) else "Sin rango"
         )
-        return DatasetInfo(path.stem, path, origin, len(df), date_range, True)
+        return DatasetInfo(
+            path.stem, path, origin, len(df), date_range, True, loaded=True
+        )
     except Exception as exc:  # noqa: BLE001 - invalid datasets are visible but not selectable.
-        return DatasetInfo(path.stem, path, origin, 0, "Sin rango", False, str(exc))
+        return DatasetInfo(
+            path.stem, path, origin, 0, "Sin rango", False, str(exc), loaded=True
+        )
 
 
 def _validated_dataset(path: Path) -> pd.DataFrame:
@@ -466,7 +569,8 @@ def _page_header() -> ft.Column:
 
 
 def _dataset_section(
-    dataset_list: ft.Column, on_import: ft.ControlEventHandler
+    content: ft.Container,
+    on_import: ft.ControlEventHandler,
 ) -> ft.Container:
     return _card(
         ft.Column(
@@ -488,9 +592,139 @@ def _dataset_section(
                         ),
                     ],
                 ),
-                dataset_list,
+                content,
             ],
         )
+    )
+
+
+def _dataset_list_content(
+    dataset_tabs: ft.Container,
+    dataset_count: ft.Text,
+    dataset_list: ft.Column,
+    load_more_button: ft.TextButton,
+) -> ft.Column:
+    return ft.Column(
+        spacing=12,
+        controls=[
+            dataset_tabs,
+            dataset_count,
+            dataset_list,
+            ft.Row(
+                alignment=ft.MainAxisAlignment.CENTER,
+                controls=[load_more_button],
+            ),
+        ],
+    )
+
+
+def _dataset_origin_tabs(state: dict[str, Any], on_change: Any) -> ft.Control:
+    origins = _available_dataset_origins(state)
+    if len(origins) <= 1:
+        return ft.Text(_dataset_origin_label(origins[0]), size=13, color=SECONDARY_TEXT)
+
+    active_origin = state["active_dataset_origin"]
+    return ft.Row(
+        spacing=8,
+        controls=[
+            _dataset_origin_tab(
+                origin,
+                selected=origin == active_origin,
+                on_click=lambda _, selected_origin=origin: on_change(selected_origin),
+            )
+            for origin in origins
+        ],
+    )
+
+
+def _dataset_origin_tab(
+    origin: str, *, selected: bool, on_click: ft.ControlEventHandler
+) -> ft.Control:
+    label = _dataset_origin_label(origin)
+    if selected:
+        return ft.FilledButton(label, on_click=on_click)
+    return ft.OutlinedButton(label, on_click=on_click)
+
+
+def _available_dataset_origins(state: dict[str, Any]) -> list[str]:
+    return [
+        origin
+        for origin in DATASET_ORIGINS
+        if any(item.origin == origin for item in state["datasets"])
+    ] or ["Aplicacion"]
+
+
+def _ensure_active_dataset_origin(state: dict[str, Any]) -> None:
+    origins = _available_dataset_origins(state)
+    if state["active_dataset_origin"] not in origins:
+        state["active_dataset_origin"] = origins[0]
+
+
+def _dataset_origin_label(origin: str) -> str:
+    if origin == "Aplicacion":
+        return "Procesados"
+    return "Importados"
+
+
+def _dataset_group_title(origin: str) -> str:
+    if origin == "Aplicacion":
+        return "Datasets procesados"
+    return "Datasets importados"
+
+
+def _selected_dataset_summary(
+    dataset: DatasetInfo, on_change: ft.ControlEventHandler
+) -> ft.Container:
+    return ft.Container(
+        width=float("inf"),
+        border=_border("#334155"),
+        border_radius=12,
+        bgcolor="#F8FAFC",
+        padding=14,
+        content=ft.Column(
+            spacing=10,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                        ft.Column(
+                            spacing=6,
+                            expand=True,
+                            controls=[
+                                ft.Text(
+                                    "Dataset seleccionado",
+                                    size=13,
+                                    weight=ft.FontWeight.W_600,
+                                    color=SECONDARY_TEXT,
+                                ),
+                                ft.Text(
+                                    dataset.name,
+                                    size=16,
+                                    weight=ft.FontWeight.W_600,
+                                    color=PRIMARY_TEXT,
+                                ),
+                                ft.Text(
+                                    f"{dataset.origin} | {dataset.rows} filas | {dataset.date_range}",
+                                    size=12,
+                                    color=SECONDARY_TEXT,
+                                ),
+                                ft.Text(
+                                    "Valido" if dataset.valid else f"Invalido: {dataset.error}",
+                                    size=12,
+                                    color="#16A34A" if dataset.valid else "#DC2626",
+                                ),
+                            ],
+                        ),
+                        ft.OutlinedButton(
+                            "Cambiar dataset",
+                            icon=ft.Icons.SWAP_HORIZ,
+                            on_click=on_change,
+                        ),
+                    ],
+                )
+            ],
+        ),
     )
 
 
@@ -508,6 +742,59 @@ def _dataset_group(
     else:
         controls.extend(_dataset_card(item, selected, on_select) for item in datasets)
     return ft.Column(spacing=8, controls=controls)
+
+
+def _hydrate_dataset_batch(
+    state: dict[str, Any], datasets: list[DatasetInfo]
+) -> list[DatasetInfo]:
+    hydrated: list[DatasetInfo] = []
+    for dataset in datasets:
+        hydrated.append(_hydrate_dataset(state, dataset))
+    return hydrated
+
+
+def _hydrate_dataset(state: dict[str, Any], dataset: DatasetInfo) -> DatasetInfo:
+    if dataset.loaded:
+        return dataset
+    loaded_dataset = _dataset_info(dataset.path, dataset.origin)
+    _replace_dataset(state, loaded_dataset)
+    return loaded_dataset
+
+
+def _replace_dataset(state: dict[str, Any], dataset: DatasetInfo) -> None:
+    state["datasets"] = [
+        dataset if item.path == dataset.path else item for item in state["datasets"]
+    ]
+
+
+def _ensure_selected_dataset_visible(state: dict[str, Any]) -> None:
+    selected = state.get("selected")
+    if selected is None:
+        return
+    visible_counts = state["visible_dataset_counts"]
+    origin_datasets = [
+        item for item in state["datasets"] if item.origin == selected.origin
+    ]
+    selected_index = next(
+        (
+            index
+            for index, item in enumerate(origin_datasets)
+            if item.path == selected.path
+        ),
+        None,
+    )
+    if selected_index is not None:
+        visible_counts[selected.origin] = max(
+            visible_counts[selected.origin], selected_index + 1
+        )
+
+
+def _dataset_count_label(visible: int, total: int) -> str:
+    if total == 0:
+        return "No hay datasets disponibles."
+    if visible >= total:
+        return f"Mostrando {total} dataset{'s' if total != 1 else ''}."
+    return f"Mostrando {visible} de {total} datasets. Desplazate para cargar mas."
 
 
 def _dataset_card(
