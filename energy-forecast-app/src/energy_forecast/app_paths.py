@@ -67,10 +67,13 @@ def default_settings() -> dict[str, Any]:
         "seeds": {
             "initialized": False,
             "initialized_at": None,
+            "updated_at": None,
             "source": "opsd",
+            "source_version": "2020-10-06",
             "raw_downloaded": False,
             "processed_generated": False,
             "reference_generated": False,
+            "last_error": None,
         },
     }
 
