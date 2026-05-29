@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import flet as ft
+import flet_charts as fc
 import pandas as pd
 
 from energy_forecast.app_paths import AppPaths
@@ -22,6 +23,10 @@ DATASET_LIST_HEIGHT = 360
 DATASET_PAGE_SIZE = 6
 DATASET_SCROLL_LOAD_THRESHOLD = 80
 DATASET_ORIGINS = ("Aplicacion", "Importado")
+PREVIEW_TABLE_ROWS = 8
+PREVIEW_CHART_ROWS = 72
+PREVIEW_TAB_CHART = "chart"
+PREVIEW_TAB_TABLE = "table"
 
 
 @dataclass(frozen=True)
@@ -57,6 +62,7 @@ def build_model_creation_page(
         },
         "show_dataset_list": True,
         "active_dataset_origin": "Aplicacion",
+        "preview_tab": PREVIEW_TAB_CHART,
     }
     dataset_list = ft.Column(
         spacing=10,
@@ -135,6 +141,7 @@ def build_model_creation_page(
     def select_dataset(dataset: DatasetInfo) -> None:
         state["selected"] = dataset
         state["show_dataset_list"] = False
+        state["preview_tab"] = PREVIEW_TAB_CHART
         _prepare_temporal_state(state, dataset)
         _configure_date_range_picker(date_range_picker, state)
         update_selection_fields()
@@ -221,7 +228,14 @@ def build_model_creation_page(
 
     def render_preview() -> None:
         dataset = state.get("selected")
-        preview.content = _dataset_preview(dataset)
+        preview.content = _dataset_preview(
+            dataset, state["preview_tab"], change_preview_tab
+        )
+
+    def change_preview_tab(tab: str) -> None:
+        state["preview_tab"] = tab
+        render_preview()
+        page.update()
 
     def open_date_range(_: ft.ControlEvent) -> None:
         if state.get("selected") is None:
@@ -317,6 +331,7 @@ def build_model_creation_page(
             state["selected"] = _hydrate_dataset(state, state["selected"])
             state["show_dataset_list"] = False
             state["active_dataset_origin"] = "Importado"
+            state["preview_tab"] = PREVIEW_TAB_CHART
             _prepare_temporal_state(state, state["selected"])
             _configure_date_range_picker(date_range_picker, state)
             update_selection_fields()
@@ -833,7 +848,9 @@ def _dataset_card(
     )
 
 
-def _dataset_preview(dataset: DatasetInfo | None) -> ft.Container:
+def _dataset_preview(
+    dataset: DatasetInfo | None, active_tab: str, on_change_tab: Any
+) -> ft.Container:
     if dataset is None:
         return _card(
             ft.Text(
@@ -842,7 +859,63 @@ def _dataset_preview(dataset: DatasetInfo | None) -> ft.Container:
                 color=SECONDARY_TEXT,
             )
         )
-    df = _validated_dataset(dataset.path).head(8)
+    df = _validated_dataset(dataset.path)
+    table_df = df.head(PREVIEW_TABLE_ROWS)
+    chart_df = df.head(PREVIEW_CHART_ROWS)
+    content = (
+        _dataset_preview_chart(chart_df)
+        if active_tab == PREVIEW_TAB_CHART
+        else _dataset_preview_table(table_df)
+    )
+    return _card(
+        ft.Column(
+            spacing=12,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text(
+                            "Vista previa",
+                            size=18,
+                            weight=ft.FontWeight.W_600,
+                            color=PRIMARY_TEXT,
+                        ),
+                        _preview_tabs(active_tab, on_change_tab),
+                    ],
+                ),
+                content,
+            ],
+        )
+    )
+
+
+def _preview_tabs(active_tab: str, on_change_tab: Any) -> ft.Row:
+    return ft.Row(
+        spacing=8,
+        controls=[
+            _preview_tab_button(
+                "Grafica",
+                selected=active_tab == PREVIEW_TAB_CHART,
+                on_click=lambda _: on_change_tab(PREVIEW_TAB_CHART),
+            ),
+            _preview_tab_button(
+                "Tabla",
+                selected=active_tab == PREVIEW_TAB_TABLE,
+                on_click=lambda _: on_change_tab(PREVIEW_TAB_TABLE),
+            ),
+        ],
+    )
+
+
+def _preview_tab_button(
+    label: str, *, selected: bool, on_click: ft.ControlEventHandler
+) -> ft.Control:
+    if selected:
+        return ft.FilledButton(label, on_click=on_click)
+    return ft.OutlinedButton(label, on_click=on_click)
+
+
+def _dataset_preview_table(df: pd.DataFrame) -> ft.Control:
     rows = [
         ft.DataRow(
             cells=[
@@ -854,53 +927,131 @@ def _dataset_preview(dataset: DatasetInfo | None) -> ft.Container:
         )
         for row in df.itertuples()
     ]
-    return _card(
-        ft.Column(
+    table = ft.DataTable(
+        columns=[
+            ft.DataColumn(
+                ft.Text(
+                    "timestamp",
+                    color=PRIMARY_TEXT,
+                    weight=ft.FontWeight.W_600,
+                )
+            ),
+            ft.DataColumn(
+                ft.Text(
+                    "y",
+                    color=PRIMARY_TEXT,
+                    weight=ft.FontWeight.W_600,
+                )
+            )
+        ],
+        rows=rows,
+        border=_border("#CBD5E1"),
+        border_radius=12,
+        heading_row_color="#F1F5F9",
+        data_row_color=ft.Colors.WHITE,
+        heading_text_style=ft.TextStyle(
+            color=PRIMARY_TEXT, weight=ft.FontWeight.W_600
+        ),
+        data_text_style=ft.TextStyle(color=PRIMARY_TEXT),
+        horizontal_lines=ft.BorderSide(1, "#E2E8F0"),
+        column_spacing=32,
+    )
+    return ft.Container(
+        width=float("inf"),
+        border=_border("#CBD5E1"),
+        border_radius=12,
+        padding=12,
+        content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=12,
             controls=[
                 ft.Text(
-                    "Vista previa",
-                    size=18,
+                    f"Primeras {len(rows)} filas",
+                    size=13,
                     weight=ft.FontWeight.W_600,
                     color=PRIMARY_TEXT,
                 ),
                 ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
                     scroll=ft.ScrollMode.AUTO,
-                    controls=[
-                        ft.DataTable(
-                            columns=[
-                                ft.DataColumn(
-                                    ft.Text(
-                                        "timestamp",
-                                        color=PRIMARY_TEXT,
-                                        weight=ft.FontWeight.W_600,
-                                    )
-                                ),
-                                ft.DataColumn(
-                                    ft.Text(
-                                        "y",
-                                        color=PRIMARY_TEXT,
-                                        weight=ft.FontWeight.W_600,
-                                    )
-                                ),
-                            ],
-                            rows=rows,
-                            border=_border("#CBD5E1"),
-                            border_radius=12,
-                            heading_row_color="#F1F5F9",
-                            data_row_color=ft.Colors.WHITE,
-                            heading_text_style=ft.TextStyle(
-                                color=PRIMARY_TEXT, weight=ft.FontWeight.W_600
-                            ),
-                            data_text_style=ft.TextStyle(color=PRIMARY_TEXT),
-                            horizontal_lines=ft.BorderSide(1, "#E2E8F0"),
-                            column_spacing=40,
-                        )
-                    ],
+                    controls=[table],
                 ),
+            ],
+        ),
+    )
+
+
+def _dataset_preview_chart(df: pd.DataFrame) -> ft.Control:
+    if df.empty:
+        return ft.Container(
+            height=260,
+            alignment=ft.Alignment(0, 0),
+            border=_border("#CBD5E1"),
+            border_radius=12,
+            content=ft.Text("Sin datos para graficar.", color=SECONDARY_TEXT),
+        )
+
+    min_y = float(df["y"].min())
+    max_y = float(df["y"].max())
+    y_padding = max((max_y - min_y) * 0.1, 1)
+    points = [
+        fc.LineChartDataPoint(
+            x=index,
+            y=float(row.y),
+            tooltip=f"{_format_timestamp(row.timestamp)}\n{row.y}",
+        )
+        for index, row in enumerate(df.itertuples())
+    ]
+
+    chart = fc.LineChart(
+        data_series=[
+            fc.LineChartData(
+                points=points,
+                color="#2563EB",
+                stroke_width=3,
+                curved=True,
+                point=True,
+                below_line_bgcolor="#DBEAFE",
+            )
+        ],
+        min_x=0,
+        max_x=max(len(points) - 1, 1),
+        min_y=min_y - y_padding,
+        max_y=max_y + y_padding,
+        left_axis=fc.ChartAxis(show_labels=False),
+        bottom_axis=fc.ChartAxis(show_labels=False),
+        horizontal_grid_lines=fc.ChartGridLines(color="#E2E8F0", interval=y_padding),
+        vertical_grid_lines=fc.ChartGridLines(color="#F1F5F9", interval=12),
+        height=300,
+        expand=True,
+    )
+
+    return ft.Container(
+        width=float("inf"),
+        border=_border("#CBD5E1"),
+        border_radius=12,
+        padding=12,
+        content=ft.Column(
+            spacing=8,
+            controls=[
+                ft.Text(
+                    f"Comportamiento inicial ({len(points)} puntos)",
+                    size=13,
+                    weight=ft.FontWeight.W_600,
+                    color=PRIMARY_TEXT,
+                ),
+                ft.Text(_dataset_preview_stats(df), size=12, color=SECONDARY_TEXT),
+                chart,
             ],
         )
     )
+
+
+def _dataset_preview_stats(df: pd.DataFrame) -> str:
+    minimum = float(df["y"].min())
+    maximum = float(df["y"].max())
+    average = float(df["y"].mean())
+    return f"Min: {minimum:.2f} | Max: {maximum:.2f} | Promedio: {average:.2f}"
 
 
 def _training_config_section(
