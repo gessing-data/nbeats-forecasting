@@ -14,7 +14,7 @@ class BackgroundOperations:
         self.status_icon = ft.Text("", size=24, visible=False)
         self.card = ft.Container(
             right=18,
-            bottom=18,
+            top=84,
             width=340,
             padding=ft.Padding(14, 12, 14, 12),
             bgcolor="#FFFFFF",
