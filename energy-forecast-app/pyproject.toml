@@ -35,5 +35,11 @@ packages = [
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0,<9.0.0"
 
+[tool.flet]
+org = "mx.tecnm"
+product = "Energy Forecast App"
+company = "TecNM"
+copyright = "Copyright (C) 2026 TecNM"
+
 [tool.flet.app]
 path = "src"
