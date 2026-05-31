@@ -981,7 +981,7 @@ def _dataset_preview_chart(df: pd.DataFrame) -> ft.Control:
                 color="#2563EB",
                 stroke_width=3,
                 curved=True,
-                point=True,
+                point=False,
                 below_line_bgcolor="#DBEAFE",
             )
         ],

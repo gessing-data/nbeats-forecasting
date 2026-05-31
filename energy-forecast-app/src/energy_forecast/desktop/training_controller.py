@@ -25,15 +25,12 @@ class TrainingController:
             "error": "",
         }
         self.pending_snackbar: dict[str, str] = {"message": ""}
-        self.indicator = _training_indicator()
-        self.page.overlay.append(self.indicator)
 
     @property
     def running(self) -> bool:
         return bool(self.state["running"])
 
-    def sync_indicator(self) -> None:
-        self.indicator.visible = self.running
+    def sync_background_operation(self) -> None:
         if self.background is not None:
             if self.running:
                 self.background.show(
@@ -58,7 +55,7 @@ class TrainingController:
         self.state["running"] = True
         self.state["success"] = ""
         self.state["error"] = ""
-        self.sync_indicator()
+        self.sync_background_operation()
         navigate_to(self.page, "/")
 
         async def run_training_task() -> None:
@@ -77,7 +74,6 @@ class TrainingController:
                         success=not bool(self.state["error"]),
                         key="training",
                     )
-                self.indicator.visible = False
                 self.pending_snackbar["message"] = message
                 self._show_model_selection()
 
@@ -108,29 +104,3 @@ class TrainingController:
             selection_metadata=request["selection_metadata"],
             description=str(request.get("description") or ""),
         )
-
-
-def _training_indicator() -> ft.Container:
-    return ft.Container(
-        right=18,
-        bottom=96,
-        width=52,
-        height=52,
-        alignment=ft.Alignment(0, 0),
-        bgcolor=ft.Colors.WHITE,
-        border=ft.Border(
-            ft.BorderSide(1, "#E2E8F0"),
-            ft.BorderSide(1, "#E2E8F0"),
-            ft.BorderSide(1, "#E2E8F0"),
-            ft.BorderSide(1, "#E2E8F0"),
-        ),
-        border_radius=16,
-        shadow=ft.BoxShadow(
-            blur_radius=18,
-            spread_radius=1,
-            color="#33415526",
-            offset=ft.Offset(0, 6),
-        ),
-        content=ft.ProgressRing(width=28, height=28, stroke_width=3, color="#0F172A"),
-        visible=False,
-    )
