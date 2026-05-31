@@ -1,0 +1,10 @@
+from __future__ import annotations
+
+
+BORDER_COLOR = "#E2E8F0"
+PRIMARY_TEXT = "#0F172A"
+SECONDARY_TEXT = "#64748B"
+SOURCE_GROUPS = ("Modelo", "Importado", "Procesado")
+SOURCE_PAGE_SIZE = 6
+SOURCE_LIST_HEIGHT = 360
+SOURCE_SCROLL_LOAD_THRESHOLD = 80

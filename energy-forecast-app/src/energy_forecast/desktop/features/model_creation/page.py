@@ -12,6 +12,11 @@ import flet_charts as fc
 import pandas as pd
 
 from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.components.incremental_selector import (
+    incremental_selector_content,
+    incremental_selector_group,
+    incremental_selector_tabs,
+)
 from energy_forecast.desktop.layout import page_shell
 from energy_forecast.storage import safe_artifact_name
 
@@ -619,46 +624,16 @@ def _dataset_list_content(
     dataset_list: ft.Column,
     load_more_button: ft.TextButton,
 ) -> ft.Column:
-    return ft.Column(
-        spacing=12,
-        controls=[
-            dataset_tabs,
-            dataset_count,
-            dataset_list,
-            ft.Row(
-                alignment=ft.MainAxisAlignment.CENTER,
-                controls=[load_more_button],
-            ),
-        ],
+    return incremental_selector_content(
+        dataset_tabs, dataset_count, dataset_list, load_more_button
     )
 
 
 def _dataset_origin_tabs(state: dict[str, Any], on_change: Any) -> ft.Control:
     origins = _available_dataset_origins(state)
-    if len(origins) <= 1:
-        return ft.Text(_dataset_origin_label(origins[0]), size=13, color=SECONDARY_TEXT)
-
-    active_origin = state["active_dataset_origin"]
-    return ft.Row(
-        spacing=8,
-        controls=[
-            _dataset_origin_tab(
-                origin,
-                selected=origin == active_origin,
-                on_click=lambda _, selected_origin=origin: on_change(selected_origin),
-            )
-            for origin in origins
-        ],
+    return incremental_selector_tabs(
+        origins, state["active_dataset_origin"], _dataset_origin_label, on_change
     )
-
-
-def _dataset_origin_tab(
-    origin: str, *, selected: bool, on_click: ft.ControlEventHandler
-) -> ft.Control:
-    label = _dataset_origin_label(origin)
-    if selected:
-        return ft.FilledButton(label, on_click=on_click)
-    return ft.OutlinedButton(label, on_click=on_click)
 
 
 def _available_dataset_origins(state: dict[str, Any]) -> list[str]:
@@ -747,16 +722,12 @@ def _dataset_group(
     title: str, datasets: list[DatasetInfo], on_select: Any, state: dict[str, Any]
 ) -> ft.Column:
     selected = state.get("selected")
-    controls: list[ft.Control] = [
-        ft.Text(title, size=13, weight=ft.FontWeight.W_600, color=SECONDARY_TEXT)
-    ]
-    if not datasets:
-        controls.append(
-            ft.Text("No hay datasets disponibles.", size=13, color=SECONDARY_TEXT)
-        )
-    else:
-        controls.extend(_dataset_card(item, selected, on_select) for item in datasets)
-    return ft.Column(spacing=8, controls=controls)
+    return incremental_selector_group(
+        title,
+        datasets,
+        "No hay datasets disponibles.",
+        lambda item: _dataset_card(item, selected, on_select),
+    )
 
 
 def _hydrate_dataset_batch(

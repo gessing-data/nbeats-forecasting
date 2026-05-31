@@ -135,7 +135,10 @@ class DesktopRouter:
             return False
         self.page.views.append(self._model_selection_view())
         self.page.views.append(
-            self._build_view(self.page.route, build_forecast_workspace_page(model))
+            self._build_view(
+                self.page.route,
+                build_forecast_workspace_page(self.page, self.paths, model),
+            )
         )
         return True
 

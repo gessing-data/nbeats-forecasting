@@ -68,7 +68,7 @@ def build_artifact_paths(
         root=root,
         model_id=resolved_model_id,
         model_dir=model_dir,
-        training_input_path=root / "data" / "imported" / f"{resolved_model_id}_training_input.csv",
+        training_input_path=model_dir / "training_input.csv",
         metadata_path=model_dir / "metadata.json",
     )
 
@@ -90,7 +90,7 @@ def build_forecast_artifact_paths(
         model_id=resolved_model_id,
         run_id=resolved_run_id,
         run_dir=run_dir,
-        forecast_input_path=root / "data" / "imported" / f"{resolved_run_id}_forecast_input.csv",
+        forecast_input_path=run_dir / "forecast_input.csv",
         forecast_path=run_dir / "forecast.csv",
         metadata_path=run_dir / "metadata.json",
     )

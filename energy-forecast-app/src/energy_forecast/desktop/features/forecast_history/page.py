@@ -224,31 +224,40 @@ def _empty_state() -> ft.Container:
     )
 
 
-def _forecast_card(page: ft.Page, run: ForecastRun) -> ft.Container:
+def _forecast_card(
+    page: ft.Page, run: ForecastRun, *, show_model_button: bool = True
+) -> ft.Container:
     return _card(
         ft.Column(
             spacing=14,
             controls=[
                 _forecast_card_header(run),
                 _forecast_preview(run),
-                ft.Row(
-                    alignment=ft.MainAxisAlignment.END,
-                    controls=[
-                        ft.OutlinedButton(
-                            "Ver detalles",
-                            icon=ft.Icons.INFO_OUTLINE,
-                            on_click=lambda _: _show_run_details(page, run),
-                        ),
-                        ft.FilledButton(
-                            "Ir al modelo",
-                            icon=ft.Icons.ARROW_FORWARD,
-                            on_click=lambda _: navigate_to(page, f"/models/{run.model_id}"),
-                        ),
-                    ],
-                ),
+                _forecast_card_actions(page, run, show_model_button=show_model_button),
             ],
         )
     )
+
+
+def _forecast_card_actions(
+    page: ft.Page, run: ForecastRun, *, show_model_button: bool
+) -> ft.Row:
+    controls: list[ft.Control] = [
+        ft.OutlinedButton(
+            "Ver detalles",
+            icon=ft.Icons.INFO_OUTLINE,
+            on_click=lambda _: _show_run_details(page, run),
+        )
+    ]
+    if show_model_button:
+        controls.append(
+            ft.FilledButton(
+                "Ir al modelo",
+                icon=ft.Icons.ARROW_FORWARD,
+                on_click=lambda _: navigate_to(page, f"/models/{run.model_id}"),
+            )
+        )
+    return ft.Row(alignment=ft.MainAxisAlignment.END, controls=controls)
 
 
 def _forecast_card_header(run: ForecastRun) -> ft.Row:
