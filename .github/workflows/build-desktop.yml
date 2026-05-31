@@ -1,0 +1,68 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "energy-forecast-app/**"
+      - ".github/workflows/build-desktop.yml"
+  workflow_dispatch:
+
+env:
+  UV_PYTHON: "3.12"
+  PYTHONUTF8: "1"
+  FLET_CLI_NO_RICH_OUTPUT: "1"
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }} app
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            runner: windows-latest
+            target: windows
+            artifact_name: energy-forecast-windows
+            artifact_path: energy-forecast-app/build/windows
+          - name: Linux
+            runner: ubuntu-latest
+            target: linux
+            artifact_name: energy-forecast-linux
+            artifact_path: energy-forecast-app/build/linux
+
+    defaults:
+      run:
+        working-directory: energy-forecast-app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Linux build dependencies
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          sudo apt-get update --allow-releaseinfo-change
+          LINUX_DEPS="$(uv run python -c 'from flet.utils.linux_deps import linux_dependencies; print(" ".join(linux_dependencies))')"
+          sudo apt-get install -y --no-install-recommends $LINUX_DEPS
+          sudo apt-get clean
+
+      - name: Check Flet environment
+        run: uv run flet doctor
+
+      - name: Build ${{ matrix.name }} app
+        run: uv run flet build ${{ matrix.target }} -v --yes
+
+      - name: Upload ${{ matrix.name }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
