@@ -31,13 +31,9 @@ jobs:
           - name: Windows
             runner: windows-latest
             target: windows
-            artifact_name: energy-forecast-windows
-            artifact_path: energy-forecast-app/build/windows/*.exe
           - name: Linux
             runner: ubuntu-latest
             target: linux
-            artifact_name: energy-forecast-linux
-            artifact_path: energy-forecast-app/build/energy-forecast-linux.AppImage
 
     defaults:
       run:
@@ -49,6 +45,49 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
+
+      - name: Export package metadata
+        id: package_metadata
+        shell: bash
+        run: |
+          uv run python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+          project = pyproject["project"]
+          flet = pyproject["tool"]["flet"]
+          package = pyproject["tool"]["energy_forecast"]["package"]
+
+          artifact = package["artifact"]
+          version = project["version"]
+          values = {
+              "APP_ARTIFACT": artifact,
+              "APP_NAME": flet["product"],
+              "APP_COMPANY": flet["company"],
+              "APP_COPYRIGHT": flet["copyright"],
+              "APP_DESCRIPTION": project["description"],
+              "APP_VERSION": version,
+              "APP_FILE_VERSION": f"{version}.0" if version.count(".") == 2 else version,
+              "APP_ICON_ICO": package["icon_ico"],
+              "APP_ICON_PNG": package["icon_png"],
+              "APPIMAGE_PATH": f"build/{artifact}-linux.AppImage",
+              "APPIMAGE_DESKTOP": f"{artifact}.desktop",
+              "APPIMAGE_ICON": f"{artifact}.png",
+              "APPIMAGE_CATEGORIES": package["linux_categories"],
+          }
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              for key, value in values.items():
+                  env.write(f"{key}={value}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              for key in ("APP_ARTIFACT", "APPIMAGE_PATH"):
+                  output.write(f"{key}={values[key]}\n")
+          PY
+
+      - name: Install Python dependencies
+        run: uv sync
 
       - name: Install Linux build dependencies
         if: matrix.target == 'linux'
@@ -62,18 +101,23 @@ jobs:
       - name: Check Flet environment
         run: uv run flet doctor
 
+      - name: Install Windows packaging tools
+        if: matrix.target == 'windows'
+        run: uv pip install pyinstaller
+
       - name: Build Windows standalone executable
         if: matrix.target == 'windows'
         run: >-
-          uv run --with pyinstaller flet pack src/main.py
-          --name energy-forecast-windows
+          uv run flet pack src/main.py
+          --name "${{ env.APP_ARTIFACT }}-windows"
           --distpath build/windows
-          --product-name "Energy Forecast App"
-          --file-description "Energy demand forecasting desktop app"
-          --product-version "0.1.0"
-          --file-version "0.1.0.0"
-          --company-name "TecNM"
-          --copyright "Copyright (C) 2026 TecNM"
+          --product-name "${{ env.APP_NAME }}"
+          --file-description "${{ env.APP_DESCRIPTION }}"
+          --product-version "${{ env.APP_VERSION }}"
+          --file-version "${{ env.APP_FILE_VERSION }}"
+          --company-name "${{ env.APP_COMPANY }}"
+          --copyright "${{ env.APP_COPYRIGHT }}"
+          --icon "${{ env.APP_ICON_ICO }}"
           --hidden-import certifi
           -y
 
@@ -105,31 +149,26 @@ jobs:
           EOF
           chmod +x "$app_dir/AppRun"
 
-          cat > "$app_dir/energy-forecast.desktop" <<EOF
+          cat > "$app_dir/$APPIMAGE_DESKTOP" <<EOF
           [Desktop Entry]
           Type=Application
-          Name=Energy Forecast App
+          Name=$APP_NAME
           Exec=$executable_name
-          Icon=energy-forecast
-          Categories=Science;Education;
+          Icon=$APP_ARTIFACT
+          Categories=$APPIMAGE_CATEGORIES
           EOF
 
-          cat > "$app_dir/energy-forecast.svg" <<'EOF'
-          <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-            <rect width="256" height="256" rx="48" fill="#0F172A"/>
-            <path d="M42 164h28l21-58 27 92 30-126 25 92h41" fill="none" stroke="#38BDF8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          EOF
+          cp "$APP_ICON_PNG" "$app_dir/$APPIMAGE_ICON"
 
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O build/appimagetool.AppImage
           chmod +x build/appimagetool.AppImage
-          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 build/appimagetool.AppImage "$app_dir" build/energy-forecast-linux.AppImage
+          ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 build/appimagetool.AppImage "$app_dir" "$APPIMAGE_PATH"
 
       - name: Upload ${{ matrix.name }} artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_path }}
+          name: ${{ steps.package_metadata.outputs.APP_ARTIFACT }}-${{ matrix.target }}
+          path: ${{ matrix.target == 'windows' && format('energy-forecast-app/build/windows/{0}-windows.exe', steps.package_metadata.outputs.APP_ARTIFACT) || format('energy-forecast-app/{0}', steps.package_metadata.outputs.APPIMAGE_PATH) }}
           if-no-files-found: error
 
   release:

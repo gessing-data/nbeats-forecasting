@@ -1,7 +1,7 @@
 [project]
 name = "energy-forecast-desktop"
 version = "0.1.0"
-description = ""
+description = "Energy demand forecasting desktop app"
 authors = [
     {name = "andyalv",email = "andy.red02@gmail.com"},
     {name = "98beto", email = "esbjavo@gmail.com"}
@@ -11,10 +11,10 @@ requires-python = ">=3.11,<3.13"
 dependencies = [
     "pandas (>=2.2.0,<3.0.0)",
     "numpy (>=1.26.0,<2.0.0)",
-    "flet (>=0.85.1,<0.86.0)",
+    "flet[desktop] (==0.85.2)",
     "neuralforecast (>=3.1.2,<4.0.0)",
     "torch (>=2.2.0,<3.0.0)",
-    "flet-charts (>=0.85.1,<0.86.0)",
+    "flet-charts (==0.85.2)",
     "plotly (>=6.7.0,<7.0.0)",
     "certifi (>=2024.0.0)",
 ]
@@ -44,3 +44,9 @@ copyright = "Copyright (C) 2026 TecNM"
 
 [tool.flet.app]
 path = "src"
+
+[tool.energy_forecast.package]
+artifact = "energy-forecast"
+icon_png = "assets/icon.png"
+icon_ico = "assets/icon.ico"
+linux_categories = "Science;Education;"
