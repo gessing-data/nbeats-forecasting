@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import flet as ft
 
+from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.features.forecast_history.page import (
+    _forecast_card,
+    _list_forecast_runs,
+)
 from energy_forecast.desktop.features.forecast_workspace.components.common import (
     _card,
     _section_card,
@@ -97,8 +102,17 @@ def _new_forecast_content(
     )
 
 
-def _runs_content() -> ft.Column:
-    return ft.Column(spacing=18, controls=[_runs_empty_state()])
+def _runs_content(
+    page: ft.Page, paths: AppPaths, model: dict[str, object]
+) -> ft.Column:
+    model_id = str(model["id"])
+    runs = [run for run in _list_forecast_runs(paths) if run.model_id == model_id]
+    if not runs:
+        return ft.Column(spacing=18, controls=[_runs_empty_state()])
+    return ft.Column(
+        spacing=12,
+        controls=[_forecast_card(page, run, show_model_button=False) for run in runs],
+    )
 
 
 def _last_result_card() -> ft.Container:

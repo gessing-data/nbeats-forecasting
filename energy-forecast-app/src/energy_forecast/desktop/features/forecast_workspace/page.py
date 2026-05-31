@@ -180,7 +180,7 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
                 action_content,
             )
             if state["active_tab"] == "new"
-            else _runs_content()
+            else _runs_content(page, paths, model)
         )
 
     def set_tab(tab: str) -> ft.ControlEventHandler:
