@@ -538,42 +538,58 @@ files = [
 
 [[package]]
 name = "flet"
-version = "0.85.1"
+version = "0.85.2"
 description = "Flet for Python - easily build interactive multi-platform apps in Python"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "flet-0.85.1-py3-none-any.whl", hash = "sha256:34c962f11118e9f92fff77705fce9b257aab9d1d48012ce0a6d08c907918c70a"},
-    {file = "flet-0.85.1.tar.gz", hash = "sha256:5e27183ce2e51f8fec0068fd1d7683858d848a9309218e06034e65ac5f400c24"},
+    {file = "flet-0.85.2-py3-none-any.whl", hash = "sha256:b2839fabf25e2db4c716ac9e0d973c6dd2fc62082d843469684ce986d0556b57"},
+    {file = "flet-0.85.2.tar.gz", hash = "sha256:17ad1958cc82a17cca32716413eb07b0145641c9ba3f5055ec9341b6146aef60"},
 ]
 
 [package.dependencies]
+flet-desktop = {version = "0.85.2", optional = true, markers = "extra == \"desktop\""}
 httpx = {version = ">=0.28.1", markers = "platform_system != \"Emscripten\""}
 msgpack = ">=1.1.0"
 oauthlib = {version = ">=3.2.2", markers = "platform_system != \"Emscripten\""}
 repath = ">=0.9.0"
 
 [package.extras]
-all = ["flet-cli (==0.85.1)", "flet-desktop (==0.85.1)", "flet-web (==0.85.1)"]
-cli = ["flet-cli (==0.85.1)", "flet-cli (==0.85.1)"]
-desktop = ["flet-desktop (==0.85.1)"]
-web = ["flet-web (==0.85.1)", "flet-web (==0.85.1)"]
+all = ["flet-cli (==0.85.2)", "flet-desktop (==0.85.2)", "flet-web (==0.85.2)"]
+cli = ["flet-cli (==0.85.2)", "flet-cli (==0.85.2)"]
+desktop = ["flet-desktop (==0.85.2)"]
+web = ["flet-web (==0.85.2)", "flet-web (==0.85.2)"]
 
 [[package]]
 name = "flet-charts"
-version = "0.85.1"
+version = "0.85.2"
 description = "Interactive chart controls for Flet apps."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "flet_charts-0.85.1-py3-none-any.whl", hash = "sha256:d31e4910e675cba5f71b3fc5a4d45c767b877cec34520156ba558dc4e9ca4f7e"},
-    {file = "flet_charts-0.85.1.tar.gz", hash = "sha256:5a596d8584f389486564a6440eccfbbdae4c14ab54a898a9e4a02ccb73acaa67"},
+    {file = "flet_charts-0.85.2-py3-none-any.whl", hash = "sha256:4ad0a5a86ce53f1c4f05ea531ffd5cf49c82325c713686fd5d9e664b96cdb55c"},
+    {file = "flet_charts-0.85.2.tar.gz", hash = "sha256:5c15a593fc48402e96e95b7e59245427ee98d43b03cf0d395252cfb1eb702bc4"},
 ]
 
 [package.dependencies]
-flet = "0.85.1"
+flet = "0.85.2"
+
+[[package]]
+name = "flet-desktop"
+version = "0.85.2"
+description = "Flet Desktop client in Flutter"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "flet_desktop-0.85.2-py3-none-any.whl", hash = "sha256:1f2aff2c66b4ed7360b3c4145aaaa9ce717ede29045159fcce66361909923fe8"},
+    {file = "flet_desktop-0.85.2.tar.gz", hash = "sha256:55dcb9afa90308b395dc488b3e59b89e6282eabe03fa5ceb294d62869826622b"},
+]
+
+[package.dependencies]
+flet = "0.85.2"
 
 [[package]]
 name = "frozenlist"
@@ -3343,4 +3359,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "4c026b79c7136e425b5b294b5e8ed13b4855e2c27eb9873b2a9a2fa3e92022b6"
+content-hash = "34a8c605ec683cb1def67ff6004f381d41943fe56c300e6a84761ba74393d3d4"
