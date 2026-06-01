@@ -105,6 +105,13 @@ jobs:
         if: matrix.target == 'windows'
         run: uv pip install pyinstaller
 
+      - name: Stage Flet app assets
+        shell: bash
+        run: |
+          mkdir -p src/assets
+          cp assets/icon.png src/assets/icon.png
+          cp assets/icon.ico src/assets/icon.ico
+
       - name: Build Windows standalone executable
         if: matrix.target == 'windows'
         run: >-
