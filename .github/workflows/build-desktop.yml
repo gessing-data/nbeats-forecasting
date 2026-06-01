@@ -12,12 +12,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
-  UV_PYTHON: "3.12"
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "2.2.1"
   PYTHONUTF8: "1"
   FLET_CLI_NO_RICH_OUTPUT: "1"
+  APPIMAGETOOL_VERSION: "1.9.1"
+  APPIMAGETOOL_SHA256: "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   build:
@@ -41,16 +48,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v8.1.0
+      - name: Setup Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
+          cache-dependency-path: energy-forecast-app/poetry.lock
+
+      - name: Install Poetry
+        run: python -m pip install "poetry==${{ env.POETRY_VERSION }}"
 
       - name: Export package metadata
         id: package_metadata
         shell: bash
         run: |
-          uv run python - <<'PY'
+          python - <<'PY'
           import os
           import tomllib
           from pathlib import Path
@@ -87,23 +101,19 @@ jobs:
           PY
 
       - name: Install Python dependencies
-        run: uv sync
+        run: poetry sync --no-interaction
 
       - name: Install Linux build dependencies
         if: matrix.target == 'linux'
         shell: bash
         run: |
           sudo apt-get update --allow-releaseinfo-change
-          LINUX_DEPS="$(uv run python -c 'from flet.utils.linux_deps import linux_dependencies; print(" ".join(linux_dependencies))')"
+          LINUX_DEPS="$(poetry run python -c 'from flet.utils.linux_deps import linux_dependencies; print(" ".join(linux_dependencies))')"
           sudo apt-get install -y --no-install-recommends $LINUX_DEPS
           sudo apt-get clean
 
       - name: Check Flet environment
-        run: uv run flet doctor
-
-      - name: Install Windows packaging tools
-        if: matrix.target == 'windows'
-        run: uv pip install pyinstaller
+        run: poetry run flet doctor
 
       - name: Stage Flet app assets
         shell: bash
@@ -115,7 +125,8 @@ jobs:
       - name: Build Windows standalone executable
         if: matrix.target == 'windows'
         run: >-
-          uv run flet pack src/main.py
+          poetry run flet pack src/main.py
+          --onedir
           --name "${{ env.APP_ARTIFACT }}-windows"
           --distpath build/windows
           --product-name "${{ env.APP_NAME }}"
@@ -125,15 +136,35 @@ jobs:
           --company-name "${{ env.APP_COMPANY }}"
           --copyright "${{ env.APP_COPYRIGHT }}"
           --icon "${{ env.APP_ICON_ICO }}"
-          --hidden-import certifi
-          --hidden-import psutil
-          --hidden-import ray._private.object_ref_generator
+          --hidden-import certifi psutil
+          --pyinstaller-build-args --additional-hooks-dir=packaging/pyinstaller_hooks
           -y
+
+      - name: Archive Windows app
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $bundle = "build/windows/$env:APP_ARTIFACT-windows"
+          $archive = "build/$env:APP_ARTIFACT-windows-x64.zip"
+          if (-not (Test-Path -LiteralPath $bundle)) {
+            throw "Windows bundle not found: $bundle"
+          }
+          Compress-Archive -LiteralPath $bundle -DestinationPath $archive -Force
+
+      - name: Smoke test Windows app bundle
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          $exe = "build/windows/$env:APP_ARTIFACT-windows/$env:APP_ARTIFACT-windows.exe"
+          if (-not (Test-Path -LiteralPath $exe)) {
+            throw "Windows executable not found: $exe"
+          }
+          & $exe --packaging-smoke-test
 
       - name: Build Linux app
         if: matrix.target == 'linux'
         run: >-
-          uv run flet build linux -v --yes
+          poetry run flet build linux -v --yes
           --cleanup-packages
           --cleanup-package-files "**/__pycache__" "**/*.pyc" "**/*.pyo" "**/*.pyi" "**/tests" "**/test"
 
@@ -170,34 +201,67 @@ jobs:
           Categories=$APPIMAGE_CATEGORIES
           EOF
 
+          mkdir -p "$app_dir/usr/share/metainfo"
+          cat > "$app_dir/usr/share/metainfo/$APP_ARTIFACT.appdata.xml" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <component type="desktop-application">
+            <id>$APP_ARTIFACT</id>
+            <name>$APP_NAME</name>
+            <summary>$APP_DESCRIPTION</summary>
+            <metadata_license>CC0-1.0</metadata_license>
+            <project_license>Proprietary</project_license>
+            <launchable type="desktop-id">$APPIMAGE_DESKTOP</launchable>
+          </component>
+          EOF
+
           cp "$APP_ICON_PNG" "$app_dir/$APPIMAGE_ICON"
 
-          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O build/appimagetool.AppImage
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VERSION/appimagetool-x86_64.AppImage" -O build/appimagetool.AppImage
+          echo "$APPIMAGETOOL_SHA256  build/appimagetool.AppImage" | sha256sum -c -
           chmod +x build/appimagetool.AppImage
           ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 build/appimagetool.AppImage "$app_dir" "$APPIMAGE_PATH"
 
+      - name: Generate artifact checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            artifact_path="build/$APP_ARTIFACT-windows-x64.zip"
+          else
+            artifact_path="$APPIMAGE_PATH"
+          fi
+
+          sha256sum "$artifact_path" > "$artifact_path.sha256"
+
       - name: Upload ${{ matrix.name }} artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ${{ steps.package_metadata.outputs.APP_ARTIFACT }}-${{ matrix.target }}
-          path: ${{ matrix.target == 'windows' && format('energy-forecast-app/build/windows/{0}-windows.exe', steps.package_metadata.outputs.APP_ARTIFACT) || format('energy-forecast-app/{0}', steps.package_metadata.outputs.APPIMAGE_PATH) }}
+          path: |
+            ${{ matrix.target == 'windows' && format('energy-forecast-app/build/{0}-windows-x64.zip', steps.package_metadata.outputs.APP_ARTIFACT) || format('energy-forecast-app/{0}', steps.package_metadata.outputs.APPIMAGE_PATH) }}
+            ${{ matrix.target == 'windows' && format('energy-forecast-app/build/{0}-windows-x64.zip.sha256', steps.package_metadata.outputs.APP_ARTIFACT) || format('energy-forecast-app/{0}.sha256', steps.package_metadata.outputs.APPIMAGE_PATH) }}
           if-no-files-found: error
+          retention-days: 14
 
   release:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
 
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v8.0.1
         with:
           path: release-artifacts
 
       - name: Publish release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.0
         with:
           files: |
-            release-artifacts/**/*.exe
+            release-artifacts/**/*.zip
             release-artifacts/**/*.AppImage
+            release-artifacts/**/*.sha256
