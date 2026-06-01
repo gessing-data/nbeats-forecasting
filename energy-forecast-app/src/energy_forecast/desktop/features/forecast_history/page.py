@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +12,7 @@ import pandas as pd
 
 from energy_forecast.app_paths import AppPaths
 from energy_forecast.desktop.components.forecast_preview_card import forecast_preview_card
+from energy_forecast.desktop.dialogs import show_destructive_confirmation
 from energy_forecast.desktop.layout import page_shell
 from energy_forecast.desktop.navigation import navigate_to
 from energy_forecast.storage.model_catalog import list_pretrained_models
@@ -225,7 +228,11 @@ def _empty_state() -> ft.Container:
 
 
 def _forecast_card(
-    page: ft.Page, run: ForecastRun, *, show_model_button: bool = True
+    page: ft.Page,
+    run: ForecastRun,
+    *,
+    show_model_button: bool = True,
+    on_deleted: ft.ControlEventHandler | None = None,
 ) -> ft.Container:
     return _card(
         ft.Column(
@@ -233,16 +240,31 @@ def _forecast_card(
             controls=[
                 _forecast_card_header(run),
                 _forecast_preview(run),
-                _forecast_card_actions(page, run, show_model_button=show_model_button),
+                _forecast_card_actions(
+                    page,
+                    run,
+                    show_model_button=show_model_button,
+                    on_deleted=on_deleted,
+                ),
             ],
         )
     )
 
 
 def _forecast_card_actions(
-    page: ft.Page, run: ForecastRun, *, show_model_button: bool
+    page: ft.Page,
+    run: ForecastRun,
+    *,
+    show_model_button: bool,
+    on_deleted: ft.ControlEventHandler | None,
 ) -> ft.Row:
     controls: list[ft.Control] = [
+        ft.TextButton(
+            "Borrar",
+            icon=ft.Icons.DELETE_OUTLINE,
+            style=ft.ButtonStyle(color="#DC2626"),
+            on_click=lambda _: _confirm_delete_run(page, run, on_deleted=on_deleted),
+        ),
         ft.OutlinedButton(
             "Ver detalles",
             icon=ft.Icons.INFO_OUTLINE,
@@ -258,6 +280,39 @@ def _forecast_card_actions(
             )
         )
     return ft.Row(alignment=ft.MainAxisAlignment.END, controls=controls)
+
+
+def _confirm_delete_run(
+    page: ft.Page,
+    run: ForecastRun,
+    *,
+    on_deleted: ft.ControlEventHandler | None = None,
+) -> None:
+    async def delete_run(_: ft.ControlEvent) -> None:
+        page.pop_dialog()
+        await asyncio.sleep(0.3)
+        try:
+            shutil.rmtree(run.metadata_path.parent)
+        except OSError as exc:
+            page.snack_bar = ft.SnackBar(ft.Text(f"No se pudo borrar el forecast: {exc}"))
+            page.snack_bar.open = True
+            page.update()
+            return
+        page.snack_bar = ft.SnackBar(ft.Text("Forecast borrado correctamente."))
+        page.snack_bar.open = True
+        if on_deleted is not None:
+            on_deleted(_)
+        elif page.on_route_change is not None:
+            page.on_route_change(None)
+        else:
+            page.update()
+
+    show_destructive_confirmation(
+        page,
+        title="Borrar forecast",
+        message=f"Se borrara el resultado {run.run_id} y sus archivos asociados.",
+        on_confirm=delete_run,
+    )
 
 
 def _forecast_card_header(run: ForecastRun) -> ft.Row:
