@@ -2,7 +2,7 @@
 
 \subsection{Conjunto de datos evaluado}
 
-Los experimentos se realizaron sobre la serie de demanda eléctrica de Austria (\texttt{AT}), extraída de Open Power System Data y procesada bajo el contrato \texttt{timestamp}/\texttt{y}. La serie utilizada contiene 50,400 observaciones horarias continuas entre el 1 de enero de 2015 a las 00:00 UTC y el 30 de septiembre de 2020 a las 23:00 UTC, sin valores faltantes, duplicados ni discontinuidades en la frecuencia horaria.
+Los experimentos se realizaron sobre la serie de demanda eléctrica de Austria (\texttt{AT}) descrita en el método, procesada bajo el contrato \texttt{timestamp}/\texttt{y}. En esta sección se reportan los tramos usados para la comparación fuera de muestra y los errores obtenidos por cada modelo.
 
 El bloque de entrenamiento de N-BEATS abarcó desde el 1 de enero de 2015 hasta el 31 de diciembre de 2018, lo que corresponde a 35,064 observaciones horarias. A partir de ese entrenamiento, se generaron cuatro pronósticos independientes, uno por cada horizonte, utilizando orígenes de pronóstico determinados por la ventana de entrada requerida. ARIMA fue ajustado para cada horizonte con los últimos 17,520 registros horarios previos a cada origen de pronóstico, equivalentes a dos años de historia. La Tabla~\ref{tab:tramos-evaluacion} resume los tramos de evaluación utilizados.
 
@@ -26,6 +26,8 @@ El bloque de entrenamiento de N-BEATS abarcó desde el 1 de enero de 2015 hasta 
 
 Las métricas se calcularon sobre exactamente los mismos timestamps para N-BEATS y ARIMA, garantizando que las diferencias observadas reflejen el comportamiento de cada modelo y no discrepancias en los tramos evaluados. La Tabla~\ref{tab:metricas-modelos} presenta los resultados obtenidos.
 
+Para interpretar la tabla, el error absoluto medio (MAE) indica el desvío promedio entre el valor real y el pronóstico en las mismas unidades de la demanda; la raíz del error cuadrático medio (RMSE) también se expresa en la unidad original, pero aumenta más cuando existen errores grandes; y el error porcentual absoluto medio (MAPE) expresa el error relativo como porcentaje del valor observado. En las tres métricas, un valor menor representa un mejor desempeño. Por ello, MAE y RMSE ayudan a leer la magnitud física del error, mientras que MAPE facilita comparar el tamaño del error respecto al nivel de demanda del tramo evaluado.
+
 \begin{table}[htbp]
     \centering
     \caption{Métricas de error para ARIMA y N-BEATS por horizonte}
@@ -44,17 +46,17 @@ Las métricas se calcularon sobre exactamente los mismos timestamps para N-BEATS
     \end{tabular}
 \end{table}
 
-En el horizonte diario, ambos modelos presentan un desempeño comparable. El MAE de N-BEATS (275.98 MW) es ligeramente inferior al de ARIMA (281.37 MW), aunque el RMSE de N-BEATS (343.68 MW) es mayor que el de ARIMA (306.12 MW), lo que indica que N-BEATS incurrió en algunos errores puntuales más grandes en este horizonte. El MAPE se mantiene por debajo del 3.2\% para ambos modelos.
+En el horizonte diario, ambos modelos presentan un desempeño comparable. El error absoluto medio de N-BEATS fue de 275.98 MW, ligeramente menor que los 281.37 MW de ARIMA, por lo que el error típico de ambos modelos fue muy similar. Sin embargo, la raíz del error cuadrático medio fue mayor en N-BEATS (343.68 MW frente a 306.12 MW), lo que indica la presencia de algunos desvíos puntuales más grandes. En términos relativos, ambos modelos se mantuvieron por debajo de 3.2\% de MAPE, por lo que la diferencia diaria no debe interpretarse como una ventaja amplia de un modelo sobre otro.
 
-En el horizonte semanal, N-BEATS muestra una ventaja clara en las tres métricas. El MAE de N-BEATS (335.39 MW) representa una reducción del 44.4\% respecto al MAE de ARIMA (603.67 MW). El RMSE sigue la misma tendencia, con N-BEATS alcanzando 418.00 MW frente a 789.27 MW de ARIMA. El MAPE de N-BEATS (4.21\%) equivale aproximadamente a la mitad del MAPE de ARIMA (7.67\%).
+En el horizonte semanal, N-BEATS muestra una ventaja clara en las tres métricas. Su MAE de 335.39 MW representa una reducción del 44.4\% respecto a los 603.67 MW de ARIMA, lo que significa que el error promedio por hora fue sustancialmente menor en el tramo evaluado. La misma tendencia aparece en RMSE, con 418.00 MW para N-BEATS frente a 789.27 MW para ARIMA, por lo que también se redujeron los errores grandes. El MAPE de N-BEATS fue de 4.21\%, aproximadamente la mitad del 7.67\% obtenido por ARIMA.
 
-En el horizonte bisemanal se observa la mayor diferencia relativa entre ambos modelos. Aunque este horizonte duplica la extensión del semanal, las métricas de N-BEATS (MAE 235.35 MW, RMSE 290.54 MW, MAPE 3.09\%) son incluso mejores que las obtenidas en el horizonte anterior, lo que sugiere que las condiciones de la serie durante el tramo evaluado (finales de febrero e inicios de marzo) favorecieron la predicción. ARIMA, en contraste, mantiene errores elevados (MAE 499.69 MW, RMSE 743.04 MW, MAPE 7.13\%), consistentes con la dificultad que representa este alcance temporal para los modelos puramente estadísticos.
+En el horizonte bisemanal se observa la mayor diferencia relativa entre ambos modelos. N-BEATS obtuvo un MAE de 235.35 MW, un RMSE de 290.54 MW y un MAPE de 3.09\%, mientras que ARIMA alcanzó 499.69 MW, 743.04 MW y 7.13\%, respectivamente. Aunque estos resultados son favorables para N-BEATS, deben leerse con cautela: el horizonte bisemanal no es necesariamente más sencillo que el semanal. Cada horizonte utiliza un origen de pronóstico distinto, por lo que las condiciones específicas del tramo evaluado, correspondiente a finales de febrero e inicios de marzo, pudieron favorecer la predicción.
 
-En el horizonte mensual, ambos modelos experimentan la mayor degradación de desempeño. El MAE de N-BEATS asciende a 625.89 MW y su MAPE a 9.57\%, mientras que ARIMA alcanza un MAE de 842.68 MW y un MAPE de 11.60\%. A pesar del aumento general del error, N-BEATS mantiene una ventaja del 25.7\% en MAE y del 17.5\% en MAPE respecto a ARIMA. Este resultado es consistente con la dificultad inherente de predecir 720 horas hacia adelante a partir únicamente de la trayectoria histórica de la demanda, sin información exógena.
+En el horizonte mensual, ambos modelos experimentan la mayor degradación de desempeño. El MAE de N-BEATS asciende a 625.89 MW y su MAPE a 9.57\%, mientras que ARIMA alcanza un MAE de 842.68 MW y un MAPE de 11.60\%. A pesar del aumento general del error, N-BEATS mantiene una ventaja del 25.7\% en MAE y del 17.5\% en MAPE respecto a ARIMA. Este resultado es consistente con la dificultad de predecir 720 horas hacia adelante usando únicamente la trayectoria histórica de la demanda, sin información exógena que ayude a anticipar cambios de calendario, clima o condiciones operativas.
 
 La Figura~\ref{fig:forecast-series} muestra los pronósticos de ambos modelos contra los valores reales para cada horizonte, incluyendo una ventana de contexto histórico que permite apreciar visualmente la continuidad entre la serie de entrada y el pronóstico generado.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figures/forecast_time_series.pdf}
     \caption{Pronósticos de ARIMA y N-BEATS contra valores reales por horizonte. La zona sombreada en gris corresponde al contexto histórico utilizado como entrada del modelo N-BEATS.}
@@ -79,7 +81,7 @@ La Tabla~\ref{tab:comparacion-relativa} resume la diferencia relativa de N-BEATS
     \end{tabular}
 \end{table}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figures/metrics_comparison.pdf}
     \caption{Comparación de MAE, RMSE y MAPE entre ARIMA y N-BEATS por horizonte.}
@@ -88,4 +90,4 @@ La Tabla~\ref{tab:comparacion-relativa} resume la diferencia relativa de N-BEATS
 
 \subsection{Resultados funcionales de la aplicación}
 
-La aplicación de escritorio completó exitosamente el flujo operativo para el cual fue diseñada. La preparación del espacio de trabajo en \path{~/Energy Forecast app}, la descarga y procesamiento de datos desde Open Power System Data, la creación de modelos N-BEATS y la generación de pronósticos se verificaron mediante los cuatro modelos entrenados para la evaluación experimental. Cada modelo entrenado produjo una carpeta en \path{models/mdl\_*} con su archivo \texttt{config.json}, \texttt{metadata.json} y el registro de entrenamiento. Cada pronóstico generado quedó almacenado en una subcarpeta \path{runs/run\_*} con sus correspondientes archivos \texttt{forecast.csv}, \texttt{forecast\_input.csv} y \texttt{metadata.json}, garantizando la trazabilidad completa entre la serie de entrada, el contexto histórico utilizado y el pronóstico resultante.
+La aplicación de escritorio completó exitosamente el flujo operativo para el cual fue diseñada. La preparación del espacio de trabajo en \path{~/Energy Forecast app}, la descarga y procesamiento de datos desde Open Power System Data, la creación de modelos N-BEATS y la generación de pronósticos se verificaron mediante los cuatro modelos entrenados para la evaluación experimental. Cada modelo entrenado produjo una carpeta en \path{models/mdl\_*} con el modelo serializado, \texttt{config.json} y \texttt{metadata.json}. Estos metadatos registran el archivo fuente, el modo de selección, el rango temporal del entrenamiento, la configuración del modelo y la configuración de cómputo, por lo que permiten reconstruir el tramo usado mientras la fuente original permanezca disponible. Cada pronóstico generado quedó almacenado en una subcarpeta \path{runs/run\_*} con sus correspondientes archivos \texttt{forecast\_input.csv}, \texttt{forecast.csv} y \texttt{metadata.json}, conservando tanto el contexto histórico utilizado como la predicción resultante.
