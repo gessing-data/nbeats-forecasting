@@ -10,6 +10,7 @@ from typing import Any, Literal
 import pandas as pd
 
 from energy_forecast.models import NBeatsModel
+from energy_forecast.models.compute import compute_metadata, compute_trainer_kwargs
 from energy_forecast.storage import build_artifact_paths, save_json
 
 SelectionMode = Literal["all", "first_n", "row_range", "date_range"]
@@ -86,6 +87,7 @@ def train_nbeats_model(
     description: str | None = None,
     model_id: str | None = None,
     overwrite_model: bool = False,
+    compute_device: str | None = None,
 ) -> TrainingResult:
     """Train N-BEATS and persist the model plus exact training input."""
     model_kwargs = dict(model_kwargs or {})
@@ -97,6 +99,9 @@ def train_nbeats_model(
 
     paths = build_artifact_paths(app_root, model_id=model_id)
     model_kwargs.setdefault("default_root_dir", str(paths.model_dir / "logs" / "training"))
+    compute_kwargs = compute_trainer_kwargs(compute_device)
+    for key, value in compute_kwargs.items():
+        model_kwargs.setdefault(key, value)
     model = NBeatsModel(
         horizon=horizon,
         freq=freq,
@@ -137,6 +142,7 @@ def train_nbeats_model(
         "start_timestamp": train_df["timestamp"].iloc[0].isoformat(),
         "end_timestamp": train_df["timestamp"].iloc[-1].isoformat(),
         "logs_path": str(paths.model_dir / "logs" / "training"),
+        "compute": compute_metadata(compute_device),
     }
     save_json(metadata, paths.metadata_path, overwrite=overwrite_model)
 

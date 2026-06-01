@@ -4,7 +4,7 @@ from pathlib import Path
 import flet as ft
 import pandas as pd
 
-from energy_forecast.app_paths import AppPaths
+from energy_forecast.app_paths import AppPaths, load_settings
 from energy_forecast.desktop.background_operations import BackgroundOperations
 from energy_forecast.desktop.navigation import navigate_to
 
@@ -64,13 +64,18 @@ class TrainingController:
         navigate_to(self.page, "/")
 
         async def run_training_task() -> None:
+            cancelled = False
             try:
                 await asyncio.to_thread(self._run_training_sync, request)
                 self.state["success"] = "Modelo N-BEATS creado correctamente."
+            except asyncio.CancelledError:
+                cancelled = True
             except Exception as exc:  # noqa: BLE001 - background failures must surface in UI.
                 self.state["error"] = f"No se pudo crear el modelo: {exc}"
             finally:
                 self.state["running"] = False
+                if cancelled:
+                    return
                 message = str(self.state["error"] or self.state["success"])
                 if self.background is not None:
                     self.background.finish(
@@ -78,9 +83,9 @@ class TrainingController:
                         message,
                         success=not bool(self.state["error"]),
                         key="training",
-                    )
+                )
                 self.pending_snackbar["message"] = message
-                self._show_model_selection()
+                self._safe_show_model_selection()
 
         self.page.run_task(run_training_task)
 
@@ -90,11 +95,23 @@ class TrainingController:
             return
         navigate_to(self.page, "/")
 
+    def _safe_show_model_selection(self) -> None:
+        try:
+            self._show_model_selection()
+        except RuntimeError as error:
+            if "destroyed session" not in str(error):
+                raise
+
     def _run_training_sync(self, request: dict[str, object]) -> None:
         from energy_forecast.services.training import train_nbeats_model
 
         source_file = Path(request["source_file"])
         series = pd.read_csv(source_file)
+        settings = load_settings(self.paths)
+        nbeats_settings = settings.get("nbeats", {})
+        compute_device = "auto"
+        if isinstance(nbeats_settings, dict):
+            compute_device = str(nbeats_settings.get("compute_device") or "auto")
         train_nbeats_model(
             app_root=self.paths.workspace_root,
             title=str(request["title"]),
@@ -108,4 +125,5 @@ class TrainingController:
             selection_mode=request["selection_mode"],
             selection_metadata=request["selection_metadata"],
             description=str(request.get("description") or ""),
+            compute_device=compute_device,
         )

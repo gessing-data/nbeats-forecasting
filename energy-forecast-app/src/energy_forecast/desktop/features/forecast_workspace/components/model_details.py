@@ -35,6 +35,9 @@ def _model_details_content(model: dict[str, object]) -> ft.Column:
         _detail_item("Frecuencia", _frequency_label(str(model["frequency"]))),
         _detail_item("Max steps", str(model["max_steps"])),
     ]
+    compute = model.get("compute")
+    if isinstance(compute, dict):
+        controls.append(_detail_item("Computo", _compute_label(compute)))
     if description:
         controls.append(_detail_item("Descripcion", description))
     return ft.Column(spacing=12, controls=controls)
@@ -63,3 +66,10 @@ def _frequency_label(value: str) -> str:
     }
     label = labels.get(value, value or "-")
     return f"{label} ({value})" if value and label != value else label
+
+
+def _compute_label(compute: dict[str, object]) -> str:
+    label = str(compute.get("label") or compute.get("resolved") or "-")
+    accelerator = str(compute.get("accelerator") or "-")
+    devices = compute.get("devices", "-")
+    return f"{label} ({accelerator}, devices={devices})"

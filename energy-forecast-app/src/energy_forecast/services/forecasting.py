@@ -71,6 +71,7 @@ def generate_nbeats_forecast(
             ),
             "forecast_path": str(paths.forecast_path),
             "forecast_relative_path": _relative_to_root(paths.forecast_path, root),
+            "compute": model.compute,
         },
         paths.metadata_path,
         overwrite=overwrite,

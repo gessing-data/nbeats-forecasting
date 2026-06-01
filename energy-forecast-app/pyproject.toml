@@ -14,7 +14,7 @@ dependencies = [
     "numpy (>=1.26.0,<2.0.0)",
     "flet[desktop] (==0.85.2)",
     "neuralforecast (>=3.1.2,<4.0.0)",
-    "torch (>=2.2.0,<3.0.0)",
+    "torch (==2.12.0+cu130)",
     "flet-charts (==0.85.2)",
     "plotly (>=6.7.0,<7.0.0)",
     "certifi (>=2024.0.0)",
@@ -44,6 +44,15 @@ pytest = ">=8.0.0,<9.0.0"
 flet-cli = "==0.85.2"
 pyinstaller = ">=6.0.0,<7.0.0"
 
+
+[[tool.poetry.source]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+priority = "explicit"
+
+
+[tool.poetry.dependencies]
+torch = {source = "pytorch-cu130"}
 [tool.flet]
 org = "mx.tecnm"
 product = "Energy Forecast App"

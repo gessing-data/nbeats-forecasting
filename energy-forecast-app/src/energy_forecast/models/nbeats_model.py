@@ -13,6 +13,7 @@ from neuralforecast.models import NBEATS
 from pandas.tseries.frequencies import to_offset
 
 from .base import ForecastModel
+from .compute import compute_metadata_from_trainer_kwargs
 
 
 class NBeatsModel(ForecastModel):
@@ -42,6 +43,7 @@ class NBeatsModel(ForecastModel):
         self.input_size = input_size if input_size is not None else 2 * horizon
         self.max_steps = max_steps
         self.model_kwargs = dict(model_kwargs or {})
+        self.compute = compute_metadata_from_trainer_kwargs(self.model_kwargs)
         self._forecaster: NeuralForecast | None = None
         self._unique_id = "series_0"
 
@@ -146,6 +148,7 @@ class NBeatsModel(ForecastModel):
             "input_size": self.input_size,
             "max_steps": self.max_steps,
             "model_kwargs": self.model_kwargs,
+            "compute": self.compute,
         }
         self._forecaster.save(
             path=str(artifact_path / self._FORECASTER_DIR),
@@ -171,6 +174,8 @@ class NBeatsModel(ForecastModel):
             max_steps=config.get("max_steps", 100),
             model_kwargs=config.get("model_kwargs", {}),
         )
+        if isinstance(config.get("compute"), dict):
+            model.compute = config["compute"]
         model._forecaster = NeuralForecast.load(str(artifact_path / cls._FORECASTER_DIR))
         return model
 

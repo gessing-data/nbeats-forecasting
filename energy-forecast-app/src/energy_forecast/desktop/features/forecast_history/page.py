@@ -357,6 +357,7 @@ def _show_run_details(page: ft.Page, run: ForecastRun) -> None:
         ("Dataset", run.dataset),
         ("Generado", _format_datetime(run.generated_at)),
         ("Input size", f"{run.input_size} horas"),
+        ("Computo", _compute_label(run.metadata.get("compute"))),
         ("Fin forecast", _format_datetime(run.last_forecast_timestamp)),
         ("Forecast input path", str(run.forecast_input_path or "-")),
         ("Forecast path", str(run.forecast_path)),
@@ -392,6 +393,15 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _compute_label(value: Any) -> str:
+    if not isinstance(value, dict):
+        return "-"
+    label = str(value.get("label") or value.get("resolved") or "-")
+    accelerator = str(value.get("accelerator") or "-")
+    devices = value.get("devices", "-")
+    return f"{label} ({accelerator}, devices={devices})"
 
 
 def _format_datetime(value: str) -> str:

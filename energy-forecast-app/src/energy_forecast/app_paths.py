@@ -75,6 +75,9 @@ def default_settings() -> dict[str, Any]:
             "reference_generated": False,
             "last_error": None,
         },
+        "nbeats": {
+            "compute_device": "auto",
+        },
     }
 
 
