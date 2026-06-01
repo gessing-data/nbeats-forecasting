@@ -36,6 +36,8 @@ packages = [
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0,<9.0.0"
+flet-cli = "==0.85.2"
+pyinstaller = ">=6.0.0,<7.0.0"
 
 [tool.flet]
 org = "mx.tecnm"
@@ -50,4 +52,4 @@ path = "src"
 artifact = "energy-forecast"
 icon_png = "assets/icon.png"
 icon_ico = "assets/icon.ico"
-linux_categories = "Science;Education;"
+linux_categories = "Science;"
