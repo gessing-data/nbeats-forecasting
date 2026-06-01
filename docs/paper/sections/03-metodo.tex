@@ -41,4 +41,74 @@ Antes de utilizar una zona como entrada del modelo, se aplican validaciones orie
 
 Como apoyo reproducible para esta preparación, el proyecto contempla notebooks de exploración y procesamiento. El notebook \texttt{01\_exploration.ipynb} permite inspeccionar el archivo crudo, identificar columnas de demanda real, revisar cobertura temporal, nulos y duplicados. El notebook \texttt{02\_prepare\_country\_datasets.ipynb} transforma zonas seleccionadas al contrato \texttt{timestamp}/\texttt{y} y exporta archivos procesados. Además, \texttt{04\_build\_opsd\_zone\_catalog.ipynb} construye un catálogo de zonas disponibles a partir de la metadata de Open Power System Data. Estos notebooks no sustituyen el flujo de la aplicación, sino que documentan y respaldan la preparación de los datos utilizados.
 
-Para las pruebas y la comparación de resultados se seleccionan Austria (\texttt{AT}) y Bélgica (\texttt{BE}) como casos de estudio específicos. Sus columnas originales son \texttt{AT\_load\_actual\_entsoe\_transparency} y \texttt{BE\_load\_actual\_entsoe\_transparency}. En los archivos procesados disponibles, \texttt{AT.csv} y \texttt{BE.csv}, cada zona contiene 50,400 observaciones horarias entre el 1 de enero de 2015 a las 00:00 UTC y el 30 de septiembre de 2020 a las 23:00 UTC. La revisión de estos archivos no identifica marcas temporales duplicadas, valores faltantes en \texttt{y} ni huecos en la frecuencia horaria, por lo que ambos casos quedan listos para aplicar el mismo protocolo de entrenamiento y evaluación.
+Para las pruebas y la comparación de resultados se selecciona Austria (\texttt{AT}) como caso de estudio principal. Su columna original en Open Power System Data corresponde a \path{AT_load_actual_entsoe_transparency}. En el archivo procesado \texttt{AT.csv}, la serie contiene 50,400 observaciones horarias entre el 1 de enero de 2015 a las 00:00 UTC y el 30 de septiembre de 2020 a las 23:00 UTC. La revisión del archivo no identifica marcas temporales duplicadas, valores faltantes en \texttt{y} ni huecos en la frecuencia horaria, por lo que la serie queda lista para aplicar el protocolo de entrenamiento y evaluación. Aunque el flujo de preparación permite trabajar con otras zonas del paquete, el análisis experimental reportado en este documento se limita a \texttt{AT} para mantener una comparación controlada entre N-BEATS y ARIMA bajo una misma serie, los mismos horizontes y los mismos tramos temporales.
+
+\subsection{Formulación del problema de pronóstico}
+
+El problema abordado se formula como un pronóstico univariado multi-step de demanda eléctrica horaria. Dada una serie temporal ordenada \(\{y_t\}_{t=1}^{T}\), donde \(y_t\) representa la carga eléctrica observada en la hora \(t\), el objetivo consiste en estimar un vector de valores futuros \(\hat{\mathbf{y}}\) para un horizonte \(H\), utilizando únicamente una ventana histórica reciente de la misma variable. En consecuencia, el modelo no recibe variables exógenas como temperatura, calendario, precios, generación o indicadores económicos; toda la información disponible para el pronóstico proviene de la trayectoria pasada de la demanda.
+
+Para el modelo N-BEATS, la entrada se define como una ventana de longitud \(L\), también denominada \texttt{input\_size}, compuesta por las observaciones más recientes antes del origen de pronóstico:
+
+\[
+    \mathbf{x}_t = [y_{t-L+1}, y_{t-L+2}, \ldots, y_t].
+\]
+
+A partir de esa ventana, el modelo estima directamente los siguientes \(H\) valores de demanda:
+
+\[
+    \hat{\mathbf{y}}_{t+1:t+H} = [\hat{y}_{t+1}, \hat{y}_{t+2}, \ldots, \hat{y}_{t+H}].
+\]
+
+La salida generada por el sistema se almacena bajo la columna \texttt{yhat}, mientras que los valores observados usados para evaluación conservan el nombre \texttt{y}. Esta convención permite comparar el pronóstico contra la serie real mediante métricas de error calculadas sobre los mismos timestamps.
+
+Los experimentos consideran cuatro horizontes de predicción: 24, 168, 336 y 720 horas. Estos horizontes representan escenarios de corto plazo diario, semanal, bisemanal y mensual, respectivamente. Para cada horizonte se define una ventana histórica proporcional al alcance del pronóstico: 168 observaciones para 24 horas, 672 para 168 horas, 1344 para 336 horas y 2160 para 720 horas. Esta configuración permite que N-BEATS reciba suficiente contexto temporal para capturar patrones horarios y semanales relevantes antes de generar la predicción.
+
+La comparación con ARIMA se formula bajo la misma variable objetivo y los mismos timestamps de evaluación. Sin embargo, ARIMA no utiliza una ventana de entrada fija equivalente a \texttt{input\_size}; en su lugar, el modelo se ajusta sobre una ventana histórica de entrenamiento previa al origen de pronóstico. Para mantener la viabilidad computacional del baseline estadístico, se emplean como máximo los últimos dos años de observaciones horarias antes de cada horizonte evaluado. De esta manera, ambos modelos se comparan sobre el mismo tramo futuro, aunque su forma de utilizar la historia sea distinta por la naturaleza de cada método.
+
+\subsection{Configuración del modelo y referencia comparativa}
+
+El modelo principal del proyecto corresponde a N-BEATS, implementado dentro de la aplicación de escritorio como el componente encargado de transformar una ventana histórica de demanda eléctrica en un horizonte futuro de pronóstico. La configuración experimental se define de acuerdo con la frecuencia horaria de la serie y con los horizontes de evaluación seleccionados. En todos los casos, la frecuencia temporal se establece como horaria (\texttt{freq = h}) y la variable objetivo corresponde exclusivamente a la columna \texttt{y}.
+
+Para cada horizonte se entrena un modelo N-BEATS independiente. Esta decisión permite ajustar la longitud de entrada y el número de pasos de entrenamiento al alcance temporal de cada experimento, evitando usar una única configuración para horizontes de dificultad distinta. La Tabla~\ref{tab:configuracion-nbeats} resume los parámetros principales empleados.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Configuración experimental de N-BEATS por horizonte}
+    \label{tab:configuracion-nbeats}
+    \begin{tabular}{lrrrr}
+        \toprule
+        Experimento & Horizonte & \texttt{input\_size} & \texttt{max\_steps} & Frecuencia \\
+        \midrule
+        Diario & 24 & 168 & 500 & Horaria \\
+        Semanal & 168 & 672 & 1000 & Horaria \\
+        Bisemanal & 336 & 1344 & 1000 & Horaria \\
+        Mensual & 720 & 2160 & 1000 & Horaria \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+La ventana de entrada se elige de forma proporcional al horizonte. Para el escenario diario, el modelo recibe una semana de observaciones horarias previas; para el semanal, cuatro semanas; para el bisemanal, ocho semanas; y para el mensual, noventa días de contexto. Esta relación busca proporcionar al modelo suficiente historia reciente para capturar patrones de corto plazo, especialmente la estacionalidad diaria y semanal presente en la demanda eléctrica horaria. El parámetro \texttt{max\_steps} controla la duración máxima del entrenamiento y se incrementa en los horizontes más largos debido a la mayor complejidad de la salida esperada.
+
+Como referencia comparativa se emplea un modelo ARIMA automático. Su función dentro del estudio no es sustituir al modelo principal ni formar parte del flujo funcional de la aplicación, sino servir como baseline estadístico externo para evaluar si N-BEATS ofrece un desempeño competitivo frente a una familia tradicional de modelos de series temporales. Para ello se utiliza \texttt{AutoARIMA} de la librería \texttt{statsforecast}, configurado con periodicidad estacional diaria mediante \texttt{season\_length = 24}. Esta configuración permite que el modelo considere patrones estacionales de 24 horas, coherentes con la frecuencia horaria de la serie de demanda.
+
+El baseline ARIMA se ajusta de manera independiente para cada horizonte, utilizando como entrenamiento los datos disponibles antes del origen de pronóstico correspondiente. Para mantener la viabilidad computacional del ajuste estadístico, se limita el entrenamiento a los últimos dos años de observaciones horarias previas a cada tramo evaluado. A diferencia de N-BEATS, ARIMA no utiliza un parámetro equivalente a \texttt{input\_size}; su ajuste se basa en la estimación de una estructura autorregresiva, de diferenciación y de media móvil sobre una ventana histórica de entrenamiento.
+
+La comparación entre N-BEATS y ARIMA se diseña bajo una condición común: ambos modelos se evalúan sobre la misma serie, los mismos horizontes y exactamente los mismos timestamps de prueba. De esta manera, las diferencias observadas en MAE, RMSE y MAPE pueden atribuirse al comportamiento de los modelos bajo el protocolo definido, y no a diferencias en los periodos evaluados o en la variable objetivo.
+
+\subsection{Implementación de la aplicación de escritorio}
+
+La aplicación de escritorio se implementa como una herramienta local orientada a organizar el flujo completo de trabajo: disponibilidad de datos, selección de series, entrenamiento de modelos N-BEATS, almacenamiento de artefactos y generación posterior de pronósticos. La interfaz se construye con Flet, lo que permite desarrollar una aplicación gráfica en Python y mantener la lógica del sistema integrada con los módulos de preparación, entrenamiento y pronóstico. Al iniciar, la aplicación prepara un espacio de trabajo local en el directorio \path{~/Energy Forecast app}, donde se almacenan datos, configuraciones, modelos entrenados y ejecuciones de forecast.
+
+El espacio de trabajo se estructura en carpetas separadas para mantener trazabilidad entre datos y artefactos. En particular, la aplicación utiliza \path{data/raw} para datos crudos, \path{data/processed} para series procesadas bajo el contrato \texttt{timestamp}/\texttt{y}, \path{data/imported} para archivos cargados por el usuario, \path{data/reference} para información auxiliar y \path{models} para modelos entrenados y sus ejecuciones. Esta separación permite que el usuario conserve los archivos producidos por la aplicación fuera del código fuente del proyecto y facilita la reutilización de modelos en sesiones posteriores.
+
+Desde el punto de vista funcional, la aplicación se organiza alrededor de cuatro vistas principales. La primera corresponde a la selección de modelos, donde se listan los modelos N-BEATS disponibles, se permite filtrarlos por dataset, horizonte, ventana de entrada, frecuencia o número de pasos de entrenamiento, y se ofrece acceso a la creación de nuevos modelos. La segunda vista corresponde a la creación de modelos, donde el usuario selecciona un dataset procesado o importado, inspecciona una vista previa de la serie, define el tramo de entrenamiento y configura parámetros como \texttt{freq}, \texttt{horizon}, \texttt{input\_size} y \texttt{max\_steps}. La tercera vista corresponde al espacio de pronóstico de un modelo, donde se selecciona una fuente de contexto histórico y se genera un nuevo forecast. Finalmente, la vista de historial permite consultar ejecuciones previas y revisar los archivos generados por cada pronóstico.
+
+El proceso de entrenamiento se ejecuta mediante un servicio especializado que recibe la serie seleccionada, valida su estructura y ajusta un modelo N-BEATS con la configuración indicada. La selección del conjunto de entrenamiento puede realizarse sobre todo el dataset, las primeras \(N\) filas, un rango de filas o un rango de fechas. Antes del ajuste, el sistema verifica que el tramo seleccionado contenga al menos \texttt{input\_size + horizon} observaciones, de modo que exista suficiente historia para construir ventanas de entrada y salidas de entrenamiento. Al finalizar, el modelo se guarda en una carpeta identificada con un \texttt{id} del tipo \texttt{mdl\_*}, junto con su configuración, metadatos y la información necesaria para reconstruir el origen del entrenamiento.
+
+La generación de pronósticos se realiza cargando un modelo N-BEATS previamente entrenado y proporcionando una serie de contexto con el mismo contrato \texttt{timestamp}/\texttt{y}. El sistema valida que el contexto contenga al menos \texttt{input\_size} observaciones y utiliza las últimas filas necesarias como entrada del modelo. El resultado se exporta como un archivo \texttt{forecast.csv}, compuesto por las columnas \texttt{timestamp} y \texttt{yhat}. Además, se guarda el archivo \texttt{forecast\_input.csv}, que contiene el contexto histórico usado para generar el pronóstico, y un archivo \texttt{metadata.json}, que registra el identificador del modelo, el identificador de la ejecución, el horizonte, la ventana de entrada, la fecha de generación y las rutas relativas de los artefactos.
+
+La persistencia de artefactos constituye una parte central de la implementación. Cada modelo entrenado queda almacenado en \path{models/mdl_*}, mientras que cada ejecución de pronóstico se guarda en una subcarpeta \path{runs/run_*} dentro del modelo correspondiente. Esta convención permite distinguir entre el artefacto del modelo y las distintas predicciones generadas a partir de él. También facilita la revisión posterior de resultados, ya que cada ejecución conserva tanto el forecast como el contexto de entrada y los metadatos asociados.
+
+El diseño separa la interfaz de usuario de los servicios internos. Las vistas de escritorio se encargan de recibir parámetros, mostrar estados y presentar resultados, mientras que los servicios de entrenamiento y pronóstico concentran la lógica de validación, ajuste del modelo, generación de predicciones y escritura de archivos. Esta separación mejora la mantenibilidad del sistema y permite que los mismos flujos puedan verificarse desde notebooks o scripts sin depender exclusivamente de la interfaz gráfica.
+
+En conjunto, la aplicación implementa un flujo reproducible para trabajar con demanda eléctrica univariada: prepara un workspace local, permite seleccionar o importar series bajo un contrato común, entrena modelos N-BEATS configurables, conserva sus artefactos y genera pronósticos reutilizables. De esta forma, el producto desarrollado no solo sirve como soporte para los experimentos del documento, sino también como una herramienta funcional para ejecutar el proceso de pronóstico sobre series horarias compatibles.
