@@ -119,11 +119,15 @@ jobs:
           --copyright "${{ env.APP_COPYRIGHT }}"
           --icon "${{ env.APP_ICON_ICO }}"
           --hidden-import certifi
+          --hidden-import psutil
           -y
 
       - name: Build Linux app
         if: matrix.target == 'linux'
-        run: uv run flet build linux -v --yes
+        run: >-
+          uv run flet build linux -v --yes
+          --cleanup-packages
+          --cleanup-package-files "**/__pycache__" "**/*.pyc" "**/*.pyo" "**/*.pyi" "**/tests" "**/test"
 
       - name: Build Linux AppImage
         if: matrix.target == 'linux'
