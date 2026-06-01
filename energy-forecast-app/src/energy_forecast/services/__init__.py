@@ -1,7 +1,13 @@
 """Application services that orchestrate data, models, and artifacts."""
 
-from .forecasting import ForecastRunResult, generate_nbeats_forecast
-from .training import TrainingResult, select_training_data, train_nbeats_model
+from __future__ import annotations
+
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .forecasting import ForecastRunResult
+    from .training import TrainingResult
 
 __all__ = [
     "ForecastRunResult",
@@ -10,3 +16,13 @@ __all__ = [
     "select_training_data",
     "train_nbeats_model",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name in {"ForecastRunResult", "generate_nbeats_forecast"}:
+        module = import_module(".forecasting", __name__)
+        return getattr(module, name)
+    if name in {"TrainingResult", "select_training_data", "train_nbeats_model"}:
+        module = import_module(".training", __name__)
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

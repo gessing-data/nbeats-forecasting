@@ -7,7 +7,6 @@ import flet as ft
 
 from energy_forecast.app_paths import AppPaths
 from energy_forecast.desktop.layout import page_shell
-from energy_forecast.services.forecasting import generate_nbeats_forecast
 
 from .components import (
     _context_section,
@@ -298,6 +297,8 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
         page.update()
 
     def generate_forecast(_: ft.ControlEvent) -> None:
+        from energy_forecast.services.forecasting import generate_nbeats_forecast
+
         summary = state.get("context_summary")
         selected = state.get("selected")
         if selected is None or not _context_ready(summary):
