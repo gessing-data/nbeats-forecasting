@@ -9,6 +9,7 @@ from typing import Any
 
 import flet as ft
 import flet_charts as fc
+import numpy as np
 import pandas as pd
 
 from energy_forecast.app_paths import AppPaths
@@ -29,7 +30,7 @@ DATASET_PAGE_SIZE = 6
 DATASET_SCROLL_LOAD_THRESHOLD = 80
 DATASET_ORIGINS = ("Aplicacion", "Importado")
 PREVIEW_TABLE_ROWS = 8
-PREVIEW_CHART_ROWS = 72
+MAX_CHART_POINTS = 200
 PREVIEW_TAB_CHART = "chart"
 PREVIEW_TAB_TABLE = "table"
 
@@ -832,7 +833,7 @@ def _dataset_preview(
         )
     df = _validated_dataset(dataset.path)
     table_df = df.head(PREVIEW_TABLE_ROWS)
-    chart_df = df.head(PREVIEW_CHART_ROWS)
+    chart_df = _downsample(df, MAX_CHART_POINTS)
     content = (
         _dataset_preview_chart(chart_df)
         if active_tab == PREVIEW_TAB_CHART
@@ -1190,6 +1191,13 @@ def _date_range_label(
 
 def _format_timestamp(value: pd.Timestamp) -> str:
     return value.strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _downsample(df: pd.DataFrame, max_points: int) -> pd.DataFrame:
+    if len(df) <= max_points:
+        return df
+    indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
+    return df.iloc[indices].reset_index(drop=True)
 
 
 def _text_field(label: str, value: str) -> ft.TextField:

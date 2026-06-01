@@ -14,7 +14,9 @@ from energy_forecast.desktop.features.forecast_workspace.constants import (
     SECONDARY_TEXT,
 )
 from energy_forecast.desktop.features.forecast_workspace.utils import (
+    MAX_CHART_POINTS,
     _border,
+    _downsample,
     _format_timestamp,
 )
 
@@ -110,8 +112,9 @@ def _context_preview_chart(context: pd.DataFrame) -> ft.Control:
             border_radius=12,
             content=ft.Text("Sin datos para graficar.", color=SECONDARY_TEXT),
         )
-    min_y = float(context["y"].min())
-    max_y = float(context["y"].max())
+    chart_df = _downsample(context, MAX_CHART_POINTS)
+    min_y = float(chart_df["y"].min())
+    max_y = float(chart_df["y"].max())
     y_padding = max((max_y - min_y) * 0.1, 1)
     points = [
         fc.LineChartDataPoint(
@@ -119,7 +122,7 @@ def _context_preview_chart(context: pd.DataFrame) -> ft.Control:
             y=float(row.y),
             tooltip=f"{_format_timestamp(row.timestamp)}\n{row.y}",
         )
-        for index, row in enumerate(context.itertuples())
+        for index, row in enumerate(chart_df.itertuples())
     ]
     chart = fc.LineChart(
         data_series=[
