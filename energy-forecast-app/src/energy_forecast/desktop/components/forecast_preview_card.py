@@ -4,6 +4,7 @@ from typing import Any
 
 import flet as ft
 import flet_charts as fc
+import numpy as np
 import pandas as pd
 
 
@@ -11,6 +12,14 @@ PRIMARY_TEXT = "#0F172A"
 SECONDARY_TEXT = "#64748B"
 CONTEXT_CHART_COLOR = "#2563EB"
 FORECAST_CHART_COLOR = "#F97316"
+MAX_CHART_POINTS = 200
+
+
+def _downsample(df: pd.DataFrame, max_points: int) -> pd.DataFrame:
+    if len(df) <= max_points:
+        return df
+    indices = np.linspace(0, len(df) - 1, max_points, dtype=int)
+    return df.iloc[indices].reset_index(drop=True)
 
 
 def forecast_preview_card(
@@ -90,12 +99,25 @@ def _metric(label: str, value: str) -> ft.Container:
 
 
 def _forecast_chart(context_df: pd.DataFrame, forecast_df: pd.DataFrame) -> fc.LineChart:
-    values = _combined_preview_values(context_df, forecast_df)
+    context_len = len(context_df)
+    forecast_len = len(forecast_df)
+    total = context_len + forecast_len
+
+    if total > MAX_CHART_POINTS:
+        budget_context = max(2, int(MAX_CHART_POINTS * context_len / total))
+        budget_forecast = max(2, MAX_CHART_POINTS - budget_context)
+        chart_context = _downsample(context_df, budget_context)
+        chart_forecast = _downsample(forecast_df, budget_forecast)
+    else:
+        chart_context = context_df
+        chart_forecast = forecast_df
+
+    values = _combined_preview_values(chart_context, chart_forecast)
     min_y = float(values.min())
     max_y = float(values.max())
     y_padding = max((max_y - min_y) * 0.1, 1)
-    context_points = _context_chart_points(context_df)
-    forecast_points = _forecast_chart_points(forecast_df, len(context_points))
+    context_points = _context_chart_points(chart_context)
+    forecast_points = _forecast_chart_points(chart_forecast, len(context_points))
     forecast_series_points = _forecast_series_points(context_points, forecast_points)
     data_series = []
 
