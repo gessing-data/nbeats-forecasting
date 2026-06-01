@@ -1,6 +1,7 @@
 import flet as ft
 
 from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.background_operations import BackgroundOperations
 from energy_forecast.desktop.components.app_navigation import build_app_bar
 from energy_forecast.desktop.features.forecast_history.page import build_forecast_history_page
 from energy_forecast.desktop.features.forecast_workspace.page import build_forecast_workspace_page
@@ -24,11 +25,13 @@ class DesktopRouter:
         paths: AppPaths,
         training: TrainingController,
         seeding: SeedingController,
+        background: BackgroundOperations | None = None,
     ) -> None:
         self.page = page
         self.paths = paths
         self.training = training
         self.seeding = seeding
+        self.background = background
         self.selection_state: dict[str, str] = {
             "query": "",
             "zone": "",
@@ -137,7 +140,7 @@ class DesktopRouter:
         self.page.views.append(
             self._build_view(
                 self.page.route,
-                build_forecast_workspace_page(self.page, self.paths, model),
+                build_forecast_workspace_page(self.page, self.paths, model, self.background),
             )
         )
         return True

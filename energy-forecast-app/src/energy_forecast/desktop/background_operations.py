@@ -112,6 +112,9 @@ class BackgroundOperations:
             self.minimized = False
         self._render()
 
+    def has_running_operation(self) -> bool:
+        return self._has_running_operation()
+
     def _handle_action(self, _: ft.ControlEvent) -> None:
         if self._has_running_operation():
             self.minimized = True

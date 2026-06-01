@@ -47,6 +47,11 @@ class TrainingController:
         return message
 
     def start_training(self, request: dict[str, object]) -> None:
+        if self.background is not None and self.background.has_running_operation():
+            self.pending_snackbar["message"] = "Ya hay una tarea en segundo plano en curso."
+            self._show_model_selection()
+            return
+
         if self.running:
             self.pending_snackbar["message"] = "Ya hay un entrenamiento en curso."
             self._show_model_selection()

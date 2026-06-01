@@ -103,7 +103,10 @@ def _new_forecast_content(
 
 
 def _runs_content(
-    page: ft.Page, paths: AppPaths, model: dict[str, object]
+    page: ft.Page,
+    paths: AppPaths,
+    model: dict[str, object],
+    on_deleted: ft.ControlEventHandler | None = None,
 ) -> ft.Column:
     model_id = str(model["id"])
     runs = [run for run in _list_forecast_runs(paths) if run.model_id == model_id]
@@ -111,7 +114,15 @@ def _runs_content(
         return ft.Column(spacing=18, controls=[_runs_empty_state()])
     return ft.Column(
         spacing=12,
-        controls=[_forecast_card(page, run, show_model_button=False) for run in runs],
+        controls=[
+            _forecast_card(
+                page,
+                run,
+                show_model_button=False,
+                on_deleted=on_deleted,
+            )
+            for run in runs
+        ],
     )
 
 

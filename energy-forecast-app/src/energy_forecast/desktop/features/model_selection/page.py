@@ -1,6 +1,7 @@
 import flet as ft
 
 from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.dialogs import show_destructive_confirmation
 from energy_forecast.desktop.features.model_selection.components.model_filters import (
     SelectionState,
     build_filter_button,
@@ -60,9 +61,6 @@ def build_model_selection_page(
         model_id = str(model["id"])
         title = str(model.get("title") or model.get("name") or model_id)
 
-        def close_dialog(_: ft.ControlEvent | None = None) -> None:
-            page.pop_dialog()
-
         def delete_model(_: ft.ControlEvent) -> None:
             try:
                 delete_pretrained_model(model_id, paths)
@@ -76,17 +74,11 @@ def build_model_selection_page(
             refresh_models(reload=True)
             page.update()
 
-        page.show_dialog(
-            ft.AlertDialog(
-                modal=True,
-                title=ft.Text("Borrar modelo"),
-                content=ft.Text(f"Esta accion eliminara permanentemente '{title}'."),
-                actions=[
-                    ft.TextButton("Cancelar", on_click=close_dialog),
-                    ft.TextButton("Borrar", style=ft.ButtonStyle(color="#DC2626"), on_click=delete_model),
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
+        show_destructive_confirmation(
+            page,
+            title="Borrar modelo",
+            message=f"Esta accion eliminara permanentemente '{title}'.",
+            on_confirm=delete_model,
         )
 
     search.on_change = refresh_models
