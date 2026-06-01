@@ -23,3 +23,6 @@
 *.xdv
 latexmkrc
 build/
+
+# Figures generation script (relies on local data not in repo)
+figures/generate_figures.py
