@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v8
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Export package metadata
         id: package_metadata
