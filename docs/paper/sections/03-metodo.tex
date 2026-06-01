@@ -28,11 +28,11 @@ La Tabla~\ref{tab:contrato-datos} muestra un ejemplo simplificado del formato fi
     \label{tab:contrato-datos}
     \begin{tabular}{ll}
         \toprule
-        \texttt{timestamp} & \texttt{y} \\
+        \texttt{timestamp}        & \texttt{y} \\
         \midrule
-        2015-01-01 00:00:00+00:00 & 5946.0 \\
-        2015-01-01 01:00:00+00:00 & 5726.0 \\
-        2015-01-01 02:00:00+00:00 & 5347.0 \\
+        2015-01-01 00:00:00+00:00 & 5946.0     \\
+        2015-01-01 01:00:00+00:00 & 5726.0     \\
+        2015-01-01 02:00:00+00:00 & 5347.0     \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -45,21 +45,9 @@ Para las pruebas y la comparación de resultados se selecciona Austria (\texttt{
 
 \subsection{Formulación del problema de pronóstico}
 
-El problema abordado se formula como un pronóstico univariado multi-step de demanda eléctrica horaria. Dada una serie temporal ordenada \(\{y_t\}_{t=1}^{T}\), donde \(y_t\) representa la carga eléctrica observada en la hora \(t\), el objetivo consiste en estimar un vector de valores futuros \(\hat{\mathbf{y}}\) para un horizonte \(H\), utilizando únicamente una ventana histórica reciente de la misma variable. En consecuencia, el modelo no recibe variables exógenas como temperatura, calendario, precios, generación o indicadores económicos; toda la información disponible para el pronóstico proviene de la trayectoria pasada de la demanda.
+El problema abordado se trabaja como un pronóstico univariado multi-step de demanda eléctrica horaria. En términos operativos, la aplicación recibe una serie ordenada bajo el contrato \texttt{timestamp}/\texttt{y}, toma un bloque reciente de observaciones históricas y genera una secuencia de valores futuros para el horizonte configurado. El modelo no recibe variables exógenas como temperatura, calendario, precios, generación o indicadores económicos; toda la información disponible para el pronóstico proviene de la trayectoria pasada de la demanda.
 
-Para el modelo N-BEATS, la entrada se define como una ventana de longitud \(L\), también denominada \texttt{input\_size}, compuesta por las observaciones más recientes antes del origen de pronóstico:
-
-\[
-    \mathbf{x}_t = [y_{t-L+1}, y_{t-L+2}, \ldots, y_t].
-\]
-
-A partir de esa ventana, el modelo estima directamente los siguientes \(H\) valores de demanda:
-
-\[
-    \hat{\mathbf{y}}_{t+1:t+H} = [\hat{y}_{t+1}, \hat{y}_{t+2}, \ldots, \hat{y}_{t+H}].
-\]
-
-La salida generada por el sistema se almacena bajo la columna \texttt{yhat}, mientras que los valores observados usados para evaluación conservan el nombre \texttt{y}. Esta convención permite comparar el pronóstico contra la serie real mediante métricas de error calculadas sobre los mismos timestamps.
+En la aplicación, la longitud del contexto histórico se controla mediante el parámetro \texttt{input\_size}. Antes de generar una predicción, el sistema verifica que la serie de contexto contenga al menos esa cantidad de observaciones y utiliza las últimas filas disponibles como entrada del modelo. El horizonte de salida se controla mediante el parámetro \texttt{horizon}, que determina cuántas horas futuras se estiman en una sola ejecución. La salida generada se almacena bajo la columna \texttt{yhat}, mientras que los valores observados usados para evaluación conservan el nombre \texttt{y}. Esta convención permite comparar el pronóstico contra la serie real mediante métricas de error calculadas sobre los mismos timestamps.
 
 Los experimentos consideran cuatro horizontes de predicción: 24, 168, 336 y 720 horas. Estos horizontes representan escenarios de corto plazo diario, semanal, bisemanal y mensual, respectivamente. Para cada horizonte se define una ventana histórica proporcional al alcance del pronóstico: 168 observaciones para 24 horas, 672 para 168 horas, 1344 para 336 horas y 2160 para 720 horas. Esta configuración permite que N-BEATS reciba suficiente contexto temporal para capturar patrones horarios y semanales relevantes antes de generar la predicción.
 
@@ -79,10 +67,10 @@ Para cada horizonte se entrena un modelo N-BEATS independiente. Esta decisión p
         \toprule
         Experimento & Horizonte & \texttt{input\_size} & \texttt{max\_steps} & Frecuencia \\
         \midrule
-        Diario & 24 & 168 & 500 & Horaria \\
-        Semanal & 168 & 672 & 1000 & Horaria \\
-        Bisemanal & 336 & 1344 & 1000 & Horaria \\
-        Mensual & 720 & 2160 & 1000 & Horaria \\
+        Diario      & 24        & 168                  & 500                 & Horaria    \\
+        Semanal     & 168       & 672                  & 1000                & Horaria    \\
+        Bisemanal   & 336       & 1344                 & 1000                & Horaria    \\
+        Mensual     & 720       & 2160                 & 1000                & Horaria    \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -99,15 +87,39 @@ La comparación entre N-BEATS y ARIMA se diseña bajo una condición común: amb
 
 La aplicación de escritorio se implementa como una herramienta local orientada a organizar el flujo completo de trabajo: disponibilidad de datos, selección de series, entrenamiento de modelos N-BEATS, almacenamiento de artefactos y generación posterior de pronósticos. La interfaz se construye con Flet, lo que permite desarrollar una aplicación gráfica en Python y mantener la lógica del sistema integrada con los módulos de preparación, entrenamiento y pronóstico. Al iniciar, la aplicación prepara un espacio de trabajo local en el directorio \path{~/Energy Forecast app}, donde se almacenan datos, configuraciones, modelos entrenados y ejecuciones de forecast.
 
-El espacio de trabajo se estructura en carpetas separadas para mantener trazabilidad entre datos y artefactos. En particular, la aplicación utiliza \path{data/raw} para datos crudos, \path{data/processed} para series procesadas bajo el contrato \texttt{timestamp}/\texttt{y}, \path{data/imported} para archivos cargados por el usuario, \path{data/reference} para información auxiliar y \path{models} para modelos entrenados y sus ejecuciones. Esta separación permite que el usuario conserve los archivos producidos por la aplicación fuera del código fuente del proyecto y facilita la reutilización de modelos en sesiones posteriores.
+El espacio de trabajo se estructura en carpetas separadas para mantener trazabilidad entre datos y artefactos sin mezclar archivos de ejecución con el código fuente del proyecto. Su organización principal es la siguiente:
+
+\begin{codeblock}{Estructura del workspace externo}
+    ~/Energy Forecast app/
+    |-- settings.json
+    |-- data/
+    |   |-- raw/
+    |   |-- processed/
+    |   |-- imported/
+    |   `-- reference/
+    `-- models/
+    `-- mdl_*/
+    |-- config.json
+    |-- metadata.json
+    |-- neuralforecast/
+    `-- runs/
+    `-- run_*/
+    |-- forecast_input.csv
+    |-- forecast.csv
+    `-- metadata.json
+\end{codeblock}
+
+En esta estructura, \path{data/raw} conserva los archivos crudos de Open Power System Data, \path{data/processed} contiene series normalizadas bajo el contrato \texttt{timestamp}/\texttt{y}, \path{data/imported} almacena archivos cargados por el usuario y \path{data/reference} guarda información auxiliar, como el catálogo de zonas disponibles. La carpeta \path{models} concentra los modelos entrenados y las ejecuciones de pronóstico asociadas a cada modelo.
 
 Desde el punto de vista funcional, la aplicación se organiza alrededor de cuatro vistas principales. La primera corresponde a la selección de modelos, donde se listan los modelos N-BEATS disponibles, se permite filtrarlos por dataset, horizonte, ventana de entrada, frecuencia o número de pasos de entrenamiento, y se ofrece acceso a la creación de nuevos modelos. La segunda vista corresponde a la creación de modelos, donde el usuario selecciona un dataset procesado o importado, inspecciona una vista previa de la serie, define el tramo de entrenamiento y configura parámetros como \texttt{freq}, \texttt{horizon}, \texttt{input\_size} y \texttt{max\_steps}. La tercera vista corresponde al espacio de pronóstico de un modelo, donde se selecciona una fuente de contexto histórico y se genera un nuevo forecast. Finalmente, la vista de historial permite consultar ejecuciones previas y revisar los archivos generados por cada pronóstico.
 
-El proceso de entrenamiento se ejecuta mediante un servicio especializado que recibe la serie seleccionada, valida su estructura y ajusta un modelo N-BEATS con la configuración indicada. La selección del conjunto de entrenamiento puede realizarse sobre todo el dataset, las primeras \(N\) filas, un rango de filas o un rango de fechas. Antes del ajuste, el sistema verifica que el tramo seleccionado contenga al menos \texttt{input\_size + horizon} observaciones, de modo que exista suficiente historia para construir ventanas de entrada y salidas de entrenamiento. Al finalizar, el modelo se guarda en una carpeta identificada con un \texttt{id} del tipo \texttt{mdl\_*}, junto con su configuración, metadatos y la información necesaria para reconstruir el origen del entrenamiento.
+El proceso de entrenamiento se ejecuta mediante un servicio especializado que recibe la serie seleccionada, valida su estructura y ajusta un modelo N-BEATS con la configuración indicada. La selección del conjunto de entrenamiento puede realizarse sobre todo el dataset, las primeras \(N\) filas, un rango de filas o un rango de fechas. Antes del ajuste, el sistema verifica que el tramo seleccionado contenga al menos \texttt{input\_size + horizon} observaciones, de modo que exista suficiente historia para construir ventanas de entrada y salidas de entrenamiento. Al finalizar, el modelo se guarda en una carpeta identificada con un \texttt{id} del tipo \texttt{mdl\_*}, junto con el modelo serializado por NeuralForecast, un archivo \texttt{config.json} y un archivo \texttt{metadata.json}.
+
+La trazabilidad del entrenamiento se apoya en esos metadatos. El archivo \texttt{config.json} registra la frecuencia, el horizonte, la ventana de entrada, el número máximo de pasos y la configuración técnica del adaptador. El archivo \texttt{metadata.json} registra el dataset, el archivo fuente, el modo de selección, los parámetros de selección, el rango temporal usado, el número de filas y la configuración de cómputo. La aplicación no guarda una copia CSV inmutable del subconjunto de entrenamiento; en cambio, conserva las referencias necesarias para reconstruirlo a partir del archivo fuente original, siempre que dicho archivo se mantenga disponible y sin cambios.
 
 La generación de pronósticos se realiza cargando un modelo N-BEATS previamente entrenado y proporcionando una serie de contexto con el mismo contrato \texttt{timestamp}/\texttt{y}. El sistema valida que el contexto contenga al menos \texttt{input\_size} observaciones y utiliza las últimas filas necesarias como entrada del modelo. El resultado se exporta como un archivo \texttt{forecast.csv}, compuesto por las columnas \texttt{timestamp} y \texttt{yhat}. Además, se guarda el archivo \texttt{forecast\_input.csv}, que contiene el contexto histórico usado para generar el pronóstico, y un archivo \texttt{metadata.json}, que registra el identificador del modelo, el identificador de la ejecución, el horizonte, la ventana de entrada, la fecha de generación y las rutas relativas de los artefactos.
 
-La persistencia de artefactos constituye una parte central de la implementación. Cada modelo entrenado queda almacenado en \path{models/mdl_*}, mientras que cada ejecución de pronóstico se guarda en una subcarpeta \path{runs/run_*} dentro del modelo correspondiente. Esta convención permite distinguir entre el artefacto del modelo y las distintas predicciones generadas a partir de él. También facilita la revisión posterior de resultados, ya que cada ejecución conserva tanto el forecast como el contexto de entrada y los metadatos asociados.
+La persistencia de artefactos constituye una parte central de la implementación. Cada modelo entrenado queda almacenado en \path{models/mdl_*}, mientras que cada ejecución de pronóstico se guarda en una subcarpeta \path{runs/run_*} dentro del modelo correspondiente. Esta convención permite distinguir entre el artefacto del modelo y las distintas predicciones generadas a partir de él. Cada run conserva el contexto histórico usado por el modelo en \texttt{forecast\_input.csv}, el pronóstico generado en \texttt{forecast.csv} y sus metadatos en \texttt{metadata.json}.
 
 El diseño separa la interfaz de usuario de los servicios internos. Las vistas de escritorio se encargan de recibir parámetros, mostrar estados y presentar resultados, mientras que los servicios de entrenamiento y pronóstico concentran la lógica de validación, ajuste del modelo, generación de predicciones y escritura de archivos. Esta separación mejora la mantenibilidad del sistema y permite que los mismos flujos puedan verificarse desde notebooks o scripts sin depender exclusivamente de la interfaz gráfica.
 
@@ -129,4 +141,4 @@ El cálculo de errores se implementa mediante notebooks independientes que permi
 
 \subsubsection{Evaluación funcional de la aplicación}
 
-Además de las métricas de pronóstico, se verifica que la aplicación de escritorio complete correctamente el flujo operativo para el cual fue diseñada. Esta verificación incluye: la preparación automática del espacio de trabajo en \path{~/Energy Forecast app}, la descarga y procesamiento de datos desde Open Power System Data, la validación de la estructura \texttt{timestamp}/\texttt{y}, la creación de modelos N-BEATS con configuraciones específicas, la persistencia de artefactos de entrenamiento en \path{models/mdl\_*} y la generación de pronósticos con almacenamiento de ejecuciones en \path{runs/run\_*}. La evaluación funcional no asigna una calificación numérica, sino que documenta la completitud del flujo implementado y la trazabilidad de los artefactos producidos, lo cual constituye un criterio de calidad para una herramienta orientada a la reproducibilidad.
+Además de las métricas de pronóstico, se verifica que la aplicación de escritorio complete correctamente el flujo operativo para el cual fue diseñada. Esta verificación incluye: la preparación automática del espacio de trabajo en \path{~/Energy Forecast app}, la descarga y procesamiento de datos desde Open Power System Data, la validación de la estructura \texttt{timestamp}/\texttt{y}, la creación de modelos N-BEATS con configuraciones específicas, la persistencia del modelo entrenado junto con su configuración y metadatos, y la generación de pronósticos con almacenamiento de ejecuciones en \path{runs/run\_*}. La evaluación funcional no asigna una calificación numérica, sino que documenta la completitud del flujo implementado y la trazabilidad de los artefactos producidos, lo cual constituye un criterio de calidad para una herramienta orientada a la reproducibilidad.
