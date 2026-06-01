@@ -1,4 +1,82 @@
-\section*{Anexo(s)}
+\section{Anexo(s)}
 \addcontentsline{toc}{section}{Anexo(s)}
 
-Agregue aqu\'i material complementario solo si es necesario para respaldar el informe principal.
+\subsection{Anexo A. Disponibilidad del código fuente y artefactos reproducibles}
+
+El código fuente de la aplicación de escritorio, los notebooks de preparación y evaluación, y los archivos del informe se encuentran disponibles como material complementario en el repositorio del proyecto:
+
+\begin{center}
+    \url{https://github.com/gessing-data/nbeats-forecasting}
+\end{center}
+
+El código fuente completo no se incorpora de forma impresa dentro del informe debido a la extensión y organización modular de la aplicación. En su lugar, este anexo identifica el repositorio donde puede consultarse la implementación completa y reproducirse el flujo descrito en el método: preparación de datos, entrenamiento de modelos N-BEATS, generación de pronósticos y cálculo de métricas de evaluación.
+
+\begin{codeblock}{Estructura general del material complementario}
+    nbeats-forecasting/
+    |-- energy-forecast-app/
+    |   `-- src/energy_forecast/
+    |       |-- desktop/
+    |       |-- services/
+    |       |-- data/
+    |       |-- models/
+    |       `-- metrics/
+    |-- notebooks/
+    |-- docs/paper/
+    `-- README.md
+\end{codeblock}
+
+La carpeta \path{energy-forecast-app} contiene la aplicación de escritorio desarrollada en Python con Flet y los servicios internos asociados al entrenamiento y pronóstico. La carpeta \path{notebooks} contiene los cuadernos utilizados para exploración, preparación de datos, ejecución del baseline ARIMA y consolidación de métricas. La carpeta \path{docs/paper} contiene el presente informe, sus figuras, configuración de \LaTeX{} y referencias bibliográficas.
+
+\subsection{Anexo B. Fuente de datos Open Power System Data}
+
+La fuente de datos utilizada en el proyecto corresponde al paquete \emph{Time series} de Open Power System Data, versión 2020-10-06 \parencite{opsd2020timeseries}. Este paquete recopila series temporales del sector eléctrico europeo publicadas por operadores y mercados eléctricos, principalmente a través de ENTSO-E Transparency. La página oficial del paquete y su identificador DOI son los siguientes:
+
+\begin{center}
+    \url{https://data.open-power-system-data.org/time_series/2020-10-06/}\\
+    \url{https://doi.org/10.25832/time_series/2020-10-06}
+\end{center}
+
+Los datos crudos de Open Power System Data no se incorporan dentro del informe por su tamaño y porque provienen de una fuente pública externa. Para efectos de trazabilidad, la Tabla~\ref{tab:opsd-archivos} resume los archivos principales disponibles en el paquete y el uso que se les dio en este trabajo.
+
+\begin{table}[H]
+    \centering
+    \caption{Archivos principales del paquete \emph{Time series} de OPSD y uso en el proyecto}
+    \label{tab:opsd-archivos}
+    \begin{tabular}{p{0.38\textwidth}p{0.30\textwidth}p{0.24\textwidth}}
+        \toprule
+        Archivo o recurso                        & Contenido general                                                                                                        & Uso en el proyecto                                                    \\
+        \midrule
+        \path{opsd-time_series-2020-10-06.zip}   & Paquete comprimido completo, con datos, metadatos y documentación.                                                       & Fuente descargable completa. No se adjunta al informe.                \\
+        \path{README.md}                         & Descripción del paquete, versión, atribución, fuentes y recursos.                                                        & Consulta documental de la fuente y condiciones de atribución.         \\
+        \path{datapackage.json}                  & Metadatos estructurados bajo el estándar Frictionless Data.                                                              & Referencia para identificar recursos, campos y metadatos del paquete. \\
+        \path{time_series.xlsx}                  & Archivo integrado en formato de hoja de cálculo.                                                                         & No se utiliza en el flujo experimental.                               \\
+        \path{time_series_15min_singleindex.csv} & Series con resolución de 15 minutos cuando la fuente original dispone de mayor granularidad.                             & No se utiliza, porque el estudio trabaja con frecuencia horaria.      \\
+        \path{time_series_30min_singleindex.csv} & Series con resolución de 30 minutos cuando la fuente original dispone de esa granularidad.                               & No se utiliza, porque el estudio trabaja con frecuencia horaria.      \\
+        \path{time_series_60min_singleindex.csv} & Series en resolución horaria con demanda, pronósticos, precios, generación renovable y capacidades para distintas zonas. & Archivo crudo usado como base del proyecto.                           \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Aunque el archivo horario contiene múltiples tipos de variables, el alcance del proyecto se restringe al pronóstico univariado de demanda eléctrica. Por ello, solo se consideran columnas de carga real observada cuyo nombre termina en \texttt{\_load\_actual\_entsoe\_transparency}. Se excluyen las columnas de pronóstico de demanda, precios, generación solar, generación eólica, capacidades instaladas, perfiles de generación y cualquier variable que no corresponda directamente a demanda real observada.
+
+Para la evaluación reportada en el informe se seleccionó Austria como caso de estudio principal. La Tabla~\ref{tab:opsd-transformacion} resume la transformación aplicada desde el archivo crudo hasta el contrato de datos usado por la aplicación.
+
+\begin{table}[H]
+    \centering
+    \caption{Datos de OPSD efectivamente utilizados en el proyecto}
+    \label{tab:opsd-transformacion}
+    \begin{tabular}{p{0.32\textwidth}p{0.30\textwidth}p{0.30\textwidth}}
+        \toprule
+        Elemento                & Origen en OPSD                              & Uso en la aplicación                                                              \\
+        \midrule
+        Archivo crudo           & \path{time_series_60min_singleindex.csv}    & Entrada original ubicada en el espacio de trabajo local de la aplicación.         \\
+        Columna temporal        & \path{utc_timestamp}                        & Se transforma a \texttt{timestamp}.                                               \\
+        Variable objetivo       & \path{AT_load_actual_entsoe_transparency}   & Se transforma a \texttt{y}.                                                       \\
+        Archivo procesado       & Serie extraída de Austria                   & \path{AT.csv}, con columnas \texttt{timestamp} y \texttt{y}.                      \\
+        Periodo utilizado       & 2015-01-01 00:00 UTC a 2020-09-30 23:00 UTC & Serie disponible para entrenamiento, contexto histórico, pronóstico y evaluación. \\
+        Número de observaciones & 50,400 registros horarios                   & Base temporal del caso de estudio.                                                \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+La preparación de datos conserva la orientación reproducible del proyecto: el archivo crudo permanece como fuente externa, las series procesadas adoptan el contrato \texttt{timestamp}/\texttt{y}, y los modelos entrenados registran metadatos que permiten identificar el archivo fuente, el tramo temporal utilizado y la configuración de entrenamiento.
