@@ -120,6 +120,7 @@ jobs:
           --icon "${{ env.APP_ICON_ICO }}"
           --hidden-import certifi
           --hidden-import psutil
+          --pyinstaller-build-args --collect-submodules ray._private --collect-submodules ray._common
           -y
 
       - name: Build Linux app
