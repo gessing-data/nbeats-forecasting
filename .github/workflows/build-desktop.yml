@@ -41,10 +41,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v8
 
       - name: Export package metadata
         id: package_metadata
@@ -177,7 +177,7 @@ jobs:
           ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 build/appimagetool.AppImage "$app_dir" "$APPIMAGE_PATH"
 
       - name: Upload ${{ matrix.name }} artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.package_metadata.outputs.APP_ARTIFACT }}-${{ matrix.target }}
           path: ${{ matrix.target == 'windows' && format('energy-forecast-app/build/windows/{0}-windows.exe', steps.package_metadata.outputs.APP_ARTIFACT) || format('energy-forecast-app/{0}', steps.package_metadata.outputs.APPIMAGE_PATH) }}
@@ -191,12 +191,12 @@ jobs:
 
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-artifacts
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             release-artifacts/**/*.exe
