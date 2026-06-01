@@ -8,6 +8,7 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
+license = "LicenseRef-Proprietary"
 dependencies = [
     "pandas (>=2.2.0,<3.0.0)",
     "numpy (>=1.26.0,<2.0.0)",
@@ -22,6 +23,10 @@ dependencies = [
 
 [project.scripts]
 app = "energy_forecast.desktop.app:run_app"
+
+[project.urls]
+Homepage = "https://github.com/gessing-data/nbeats-forecasting"
+Repository = "https://github.com/gessing-data/nbeats-forecasting"
 
 
 [build-system]
@@ -52,4 +57,7 @@ path = "src"
 artifact = "energy-forecast"
 icon_png = "assets/icon.png"
 icon_ico = "assets/icon.ico"
+linux_app_id = "mx.tecnm.EnergyForecast"
 linux_categories = "Science;"
+appstream_developer_id = "mx.tecnm"
+appstream_description = "Forecast univariate electricity demand from hourly time series using N-BEATS models and compare results against statistical baselines."

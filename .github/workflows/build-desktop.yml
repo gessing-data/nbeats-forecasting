@@ -71,23 +71,31 @@ jobs:
           project = pyproject["project"]
           flet = pyproject["tool"]["flet"]
           package = pyproject["tool"]["energy_forecast"]["package"]
+          urls = project.get("urls", {})
 
           artifact = package["artifact"]
           version = project["version"]
+          linux_app_id = package["linux_app_id"]
           values = {
               "APP_ARTIFACT": artifact,
+              "APP_ID": linux_app_id,
               "APP_NAME": flet["product"],
               "APP_COMPANY": flet["company"],
               "APP_COPYRIGHT": flet["copyright"],
               "APP_DESCRIPTION": project["description"],
+              "APP_HOMEPAGE": urls["Homepage"],
+              "APP_LICENSE": project["license"],
               "APP_VERSION": version,
               "APP_FILE_VERSION": f"{version}.0" if version.count(".") == 2 else version,
               "APP_ICON_ICO": package["icon_ico"],
               "APP_ICON_PNG": package["icon_png"],
               "APPIMAGE_PATH": f"build/{artifact}-linux.AppImage",
-              "APPIMAGE_DESKTOP": f"{artifact}.desktop",
-              "APPIMAGE_ICON": f"{artifact}.png",
+              "APPIMAGE_DESKTOP": f"{linux_app_id}.desktop",
+              "APPIMAGE_ICON": f"{linux_app_id}.png",
+              "APPIMAGE_METAINFO": f"{linux_app_id}.metainfo.xml",
               "APPIMAGE_CATEGORIES": package["linux_categories"],
+              "APPSTREAM_DEVELOPER_ID": package["appstream_developer_id"],
+              "APPSTREAM_DESCRIPTION": package["appstream_description"],
           }
 
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
@@ -135,7 +143,7 @@ jobs:
           --copyright "${{ env.APP_COPYRIGHT }}"
           --icon "${{ env.APP_ICON_ICO }}"
           --hidden-import certifi psutil
-          --pyinstaller-build-args --additional-hooks-dir=packaging/pyinstaller_hooks
+          --pyinstaller-build-args=--additional-hooks-dir=packaging/pyinstaller_hooks
           -y
 
       - name: Archive Windows app
@@ -194,25 +202,38 @@ jobs:
           [Desktop Entry]
           Type=Application
           Name=$APP_NAME
+          Comment=$APP_DESCRIPTION
           Exec=$executable_name
-          Icon=$APP_ARTIFACT
+          Icon=$APP_ID
           Categories=$APPIMAGE_CATEGORIES
+          Terminal=false
           EOF
 
+          install -Dm644 "$app_dir/$APPIMAGE_DESKTOP" "$app_dir/usr/share/applications/$APPIMAGE_DESKTOP"
+
           mkdir -p "$app_dir/usr/share/metainfo"
-          cat > "$app_dir/usr/share/metainfo/$APP_ARTIFACT.appdata.xml" <<EOF
+          cat > "$app_dir/usr/share/metainfo/$APPIMAGE_METAINFO" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <component type="desktop-application">
-            <id>$APP_ARTIFACT</id>
+            <id>$APP_ID</id>
             <name>$APP_NAME</name>
             <summary>$APP_DESCRIPTION</summary>
+            <description>
+              <p>$APPSTREAM_DESCRIPTION</p>
+            </description>
             <metadata_license>CC0-1.0</metadata_license>
-            <project_license>Proprietary</project_license>
+            <project_license>$APP_LICENSE</project_license>
+            <developer id="$APPSTREAM_DEVELOPER_ID">
+              <name>$APP_COMPANY</name>
+            </developer>
+            <url type="homepage">$APP_HOMEPAGE</url>
             <launchable type="desktop-id">$APPIMAGE_DESKTOP</launchable>
+            <content_rating type="oars-1.1" />
           </component>
           EOF
 
           cp "$APP_ICON_PNG" "$app_dir/$APPIMAGE_ICON"
+          install -Dm644 "$APP_ICON_PNG" "$app_dir/usr/share/icons/hicolor/256x256/apps/$APPIMAGE_ICON"
 
           wget -q "https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL_VERSION/appimagetool-x86_64.AppImage" -O build/appimagetool.AppImage
           echo "$APPIMAGETOOL_SHA256  build/appimagetool.AppImage" | sha256sum -c -
