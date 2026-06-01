@@ -65,6 +65,7 @@ def _load_model_record(
     horizon = int(config.get("horizon", 0))
     max_steps = int(config.get("max_steps", 0))
     frequency = str(config.get("freq", ""))
+    compute = config.get("compute") or metadata.get("compute") or {}
     zone = zone_names.get(dataset, dataset)
     title = str(metadata.get("title") or f"{model_type.upper()} {zone}")
 
@@ -85,6 +86,7 @@ def _load_model_record(
         "horizon": horizon,
         "frequency": frequency,
         "max_steps": max_steps,
+        "compute": compute if isinstance(compute, dict) else {},
         "model_type": model_type,
         "model_dir": str(model_dir),
         "config": config,

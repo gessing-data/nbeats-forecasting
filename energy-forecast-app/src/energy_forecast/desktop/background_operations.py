@@ -130,7 +130,7 @@ class BackgroundOperations:
 
     def _toggle_action_button(self, event: ft.ControlEvent) -> None:
         self.action_button.opacity = 1 if event.data else 0
-        self.page.update()
+        self._safe_update()
 
     def _has_running_operation(self) -> bool:
         return any(operation[2] == "running" for operation in self.operations.values())
@@ -138,7 +138,7 @@ class BackgroundOperations:
     def _render(self) -> None:
         if not self.operations:
             self.wrapper.visible = False
-            self.page.update()
+            self._safe_update()
             return
         title, message, state = next(reversed(self.operations.values()))
         self.title.value = title
@@ -161,4 +161,11 @@ class BackgroundOperations:
         self.hover_area.width = 64 if self.minimized else 258
         self.hover_area.height = 64 if self.minimized else None
         self.wrapper.visible = True
-        self.page.update()
+        self._safe_update()
+
+    def _safe_update(self) -> None:
+        try:
+            self.page.update()
+        except RuntimeError as error:
+            if "destroyed session" not in str(error):
+                raise

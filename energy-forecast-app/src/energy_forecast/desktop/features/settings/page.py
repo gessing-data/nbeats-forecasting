@@ -5,9 +5,14 @@ import subprocess
 
 import flet as ft
 
-from energy_forecast.app_paths import AppPaths, load_settings
+from energy_forecast.app_paths import AppPaths, load_settings, save_settings
 from energy_forecast.desktop.layout import page_shell
 from energy_forecast.desktop.seeding_controller import SeedingController
+from energy_forecast.models.compute import (
+    DEFAULT_COMPUTE_SELECTION,
+    available_compute_devices,
+    compute_metadata,
+)
 
 
 def build_settings_page(page: ft.Page, paths: AppPaths, seeding: SeedingController) -> ft.Control:
@@ -21,6 +26,7 @@ def build_settings_page(page: ft.Page, paths: AppPaths, seeding: SeedingControll
             controls=[
                 _page_title("Configuracion de la app"),
                 _workspace_section(page, paths),
+                _nbeats_compute_section(page, paths, settings),
                 _datasets_section(page, seeding, initialized),
             ],
         )
@@ -164,6 +170,85 @@ def _datasets_section(page: ft.Page, seeding: SeedingController, initialized: bo
                 ),
             ],
         )
+    )
+
+
+def _nbeats_compute_section(
+    page: ft.Page, paths: AppPaths, settings: dict[str, object]
+) -> ft.Container:
+    nbeats = settings.get("nbeats", {})
+    selected = DEFAULT_COMPUTE_SELECTION
+    if isinstance(nbeats, dict):
+        selected = str(nbeats.get("compute_device") or DEFAULT_COMPUTE_SELECTION)
+    devices = available_compute_devices()
+    valid_ids = {device.id for device in devices}
+    if selected not in valid_ids:
+        selected = DEFAULT_COMPUTE_SELECTION
+    resolved = compute_metadata(selected)
+    status = ft.Text(_compute_status_text(resolved), size=13, color="#64748B")
+    unavailable = [device for device in devices if not device.available]
+
+    dropdown = ft.Dropdown(
+        label="Ejecutor de N-BEATS",
+        value=selected,
+        options=[ft.dropdown.Option(device.id, device.label) for device in devices],
+        border_color="#CBD5E1",
+        focused_border_color="#334155",
+        expand=True,
+    )
+
+    def save_compute_selection(_: ft.ControlEvent) -> None:
+        current = load_settings(paths)
+        current_nbeats = current.get("nbeats", {})
+        if not isinstance(current_nbeats, dict):
+            current_nbeats = {}
+        current_nbeats["compute_device"] = dropdown.value or DEFAULT_COMPUTE_SELECTION
+        current["nbeats"] = current_nbeats
+        save_settings(paths, current)
+        updated = compute_metadata(str(current_nbeats["compute_device"]))
+        status.value = _compute_status_text(updated)
+        page.snack_bar = ft.SnackBar(ft.Text("Configuracion de N-BEATS guardada."))
+        page.snack_bar.open = True
+        page.update()
+
+    dropdown.on_change = save_compute_selection
+
+    return _settings_card(
+        ft.Column(
+            spacing=14,
+            controls=[
+                _section_header(
+                    "Computo N-BEATS",
+                    "Selecciona CPU o una GPU. Las GPUs no disponibles aparecen con el motivo detectado.",
+                ),
+                dropdown,
+                status,
+                *[_unavailable_device_warning(device.label, device.reason) for device in unavailable],
+            ],
+        )
+    )
+
+
+def _compute_status_text(metadata: dict[str, object]) -> str:
+    text = (
+        f"Se usara: {metadata.get('label', '-')}. "
+        f"Accelerator={metadata.get('accelerator', '-')}, devices={metadata.get('devices', '-')}"
+    )
+    if metadata.get("available") is False and metadata.get("reason"):
+        text = f"{text}. {metadata['reason']}"
+    return text
+
+
+def _unavailable_device_warning(label: str, reason: str) -> ft.Container:
+    return ft.Container(
+        padding=ft.Padding(12, 10, 12, 10),
+        bgcolor="#FEF3C7",
+        border_radius=10,
+        content=ft.Text(
+            f"{label}: {reason}",
+            size=12,
+            color="#92400E",
+        ),
     )
 
 
