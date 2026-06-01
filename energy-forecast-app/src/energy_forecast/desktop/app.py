@@ -33,7 +33,7 @@ def main(page: ft.Page) -> None:
     background = BackgroundOperations(page)
     training = TrainingController(page, paths, background)
     seeding = SeedingController(page, paths, background)
-    DesktopRouter(page, paths, training, seeding).attach()
+    DesktopRouter(page, paths, training, seeding, background).attach()
 
 
 def run_app() -> None:

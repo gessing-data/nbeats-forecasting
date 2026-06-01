@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
 import flet as ft
 
 from energy_forecast.app_paths import AppPaths
+from energy_forecast.desktop.background_operations import BackgroundOperations
 from energy_forecast.desktop.layout import page_shell
 
 from .components import (
@@ -56,11 +58,17 @@ def build_forecast_workspace_page(
     page: ft.Page,
     paths: AppPaths,
     model: dict[str, object],
+    background: BackgroundOperations | None = None,
 ) -> ft.Control:
-    return page_shell(_workspace_content(page, paths, model))
+    return page_shell(_workspace_content(page, paths, model, background))
 
 
-def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object]) -> ft.Column:
+def _workspace_content(
+    page: ft.Page,
+    paths: AppPaths,
+    model: dict[str, object],
+    background: BackgroundOperations | None,
+) -> ft.Column:
     state: dict[str, Any] = {
         "sources": _load_sources(paths, model),
         "selected": None,
@@ -179,7 +187,7 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
                 action_content,
             )
             if state["active_tab"] == "new"
-            else _runs_content(page, paths, model)
+            else _runs_content(page, paths, model, on_deleted=refresh_runs_tab)
         )
 
     def set_tab(tab: str) -> ft.ControlEventHandler:
@@ -189,6 +197,11 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
             page.update()
 
         return handler
+
+    def refresh_runs_tab(_: ft.ControlEvent | None = None) -> None:
+        state["active_tab"] = "runs"
+        render_workspace()
+        page.update()
 
     def select_source(source: SourceInfo) -> None:
         try:
@@ -238,7 +251,14 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
         last_result_content.content = _last_result_content(state.get("last_result"))
 
     def refresh_action_content() -> None:
-        disabled = state["forecasting"] or not _context_ready(state.get("context_summary"))
+        background_running = (
+            background is not None and background.has_running_operation()
+        )
+        disabled = (
+            state["forecasting"]
+            or background_running
+            or not _context_ready(state.get("context_summary"))
+        )
         loading.visible = state["forecasting"]
         action_content.content = _forecast_action_panel(generate_forecast, loading, disabled)
 
@@ -297,34 +317,62 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
         page.update()
 
     def generate_forecast(_: ft.ControlEvent) -> None:
-        from energy_forecast.services.forecasting import generate_nbeats_forecast
-
         summary = state.get("context_summary")
         selected = state.get("selected")
         if selected is None or not _context_ready(summary):
             show_error("Selecciona una fuente y un contexto valido antes de generar el pronostico.")
             return
+        if background is not None and background.has_running_operation():
+            show_error("Ya hay una tarea en segundo plano en curso. Espera a que termine antes de generar otro pronostico.")
+            return
         state["forecasting"] = True
         error.visible = False
         refresh_action_content()
-        page.update()
-        try:
-            result = generate_nbeats_forecast(
-                app_root=paths.workspace_root,
-                model_path=str(model["model_dir"]),
-                context=summary["context"],
-                dataset_name=selected.name,
+        if background is not None:
+            background.show(
+                "Pronostico en curso",
+                "Generando forecast con el modelo seleccionado.",
+                key="forecast",
             )
-        except Exception as exc:  # noqa: BLE001 - execution errors must be visible in the UI.
-            state["forecasting"] = False
-            refresh_action_content()
-            show_error(str(exc))
-            return
-        state["forecasting"] = False
-        state["last_result"] = _forecast_result_summary(result, selected.name, summary)
-        refresh_last_result()
-        refresh_action_content()
         page.update()
+
+        async def run_forecast_task() -> None:
+            try:
+                await asyncio.sleep(0.1)
+                result = await asyncio.to_thread(
+                    _generate_forecast_sync,
+                    paths,
+                    model,
+                    summary,
+                    selected.name,
+                )
+            except Exception as exc:  # noqa: BLE001 - execution errors must be visible in the UI.
+                state["forecasting"] = False
+                refresh_action_content()
+                message = str(exc)
+                if background is not None:
+                    background.finish(
+                        "Pronostico en curso",
+                        f"No se pudo generar el forecast: {message}",
+                        success=False,
+                        key="forecast",
+                    )
+                show_error(message)
+                return
+            state["forecasting"] = False
+            state["last_result"] = _forecast_result_summary(result, selected.name, summary)
+            refresh_last_result()
+            refresh_action_content()
+            if background is not None:
+                background.finish(
+                    "Pronostico generado",
+                    "Forecast generado correctamente.",
+                    success=True,
+                    key="forecast",
+                )
+            page.update()
+
+        page.run_task(run_forecast_task)
 
     def import_file(source: Path) -> None:
         try:
@@ -385,6 +433,22 @@ def _workspace_content(page: ft.Page, paths: AppPaths, model: dict[str, object])
 
 def _context_ready(summary: object) -> bool:
     return isinstance(summary, dict) and "context" in summary and "error" not in summary
+
+
+def _generate_forecast_sync(
+    paths: AppPaths,
+    model: dict[str, object],
+    summary: dict[str, object],
+    dataset_name: str,
+) -> object:
+    from energy_forecast.services.forecasting import generate_nbeats_forecast
+
+    return generate_nbeats_forecast(
+        app_root=paths.workspace_root,
+        model_path=str(model["model_dir"]),
+        context=summary["context"],
+        dataset_name=dataset_name,
+    )
 
 
 def _forecast_result_summary(
