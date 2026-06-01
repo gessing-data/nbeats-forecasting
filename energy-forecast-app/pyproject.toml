@@ -17,6 +17,7 @@ dependencies = [
     "flet-charts (==0.85.2)",
     "plotly (>=6.7.0,<7.0.0)",
     "certifi (>=2024.0.0)",
+    "psutil (>=5.9.0,<8.0.0)",
 ]
 
 [project.scripts]
